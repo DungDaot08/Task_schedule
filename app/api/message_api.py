@@ -12,11 +12,11 @@ from app.ai.worker_render import run_once
 router = APIRouter()
 
 
-@router.post("/messages", response_model=MessageOut)
-def send_message(data: MessageCreate, db: Session = Depends(get_db)):
-    msg = create_message(db, data.sender_id, data.content)
-    push_job(msg.id)
-    return msg
+# @router.post("/messages", response_model=MessageOut)
+# def send_message(data: MessageCreate, db: Session = Depends(get_db)):
+#    msg = create_message(db, data.sender_id, data.content)
+#    push_job(msg.id)
+#    return msg
 
 
 @router.get("/", response_model=list[MessageOut])
@@ -28,7 +28,7 @@ def list_messages(db: Session = Depends(get_db)):
     )
 
 
-@router.post("/messages_1", response_model=MessageOut)
+@router.post("/messages", response_model=MessageOut)
 def send_message(
     data: MessageCreate,
     background_tasks: BackgroundTasks,   # ⭐ thêm
