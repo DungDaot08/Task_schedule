@@ -81,9 +81,11 @@ Tin nhắn:
 
 def parse_message(message: str) -> dict:
     try:
-        # ===== Current time VN =====
         tz = pytz.timezone("Asia/Ho_Chi_Minh")
-        current_time = datetime.now(tz).isoformat()
+        now_dt = datetime.now(tz)
+        current_time = now_dt.isoformat()
+        current_date = now_dt.strftime("%Y-%m-%d")
+        current_weekday = now_dt.strftime("%A")
 
         prompt = f"""
 Bạn là AI chuyên TRÍCH XUẤT CÔNG VIỆC từ tin nhắn tiếng Việt.
@@ -91,53 +93,72 @@ Bạn là AI chuyên TRÍCH XUẤT CÔNG VIỆC từ tin nhắn tiếng Việt.
 ========================
 THỜI GIAN HỆ THỐNG
 
-Thời gian hiện tại:
+Current datetime:
 {current_time}
 
-Múi giờ mặc định:
+Current date:
+{current_date}
+
+Current weekday:
+{current_weekday}
+
+Timezone:
 Asia/Ho_Chi_Minh (UTC+7)
 
 ========================
-NHIỆM VỤ DUY NHẤT
+NHIỆM VỤ
 
-1. Xác định tin nhắn CÓ PHẢI là công việc hay KHÔNG
-2. Nếu CÓ → trích xuất đúng schema JSON
-
-========================
-QUY TẮC CỨNG (KHÔNG ĐƯỢC VI PHẠM)
-
-Nếu tin nhắn đồng thời có:
-
-1. Có người được giao việc:
-   - Xuất hiện dạng "@Tên"
-
-2. Có thời gian trong tương lai:
-   - Ví dụ: mai, chiều mai, sáng mai, tối mai, tuần sau, ngày, giờ
-
-3. Có động từ hành động:
-   - Ví dụ: làm, hoàn thành, xử lý, đi, gặp, chuẩn bị, gửi, kiểm tra, họp, cập nhật
-
-👉 CHỈ CẦN ĐỦ CẢ 3 ĐIỀU KIỆN
-👉 BẮT BUỘC is_task = true
+1. Xác định có phải công việc hay không
+2. Nếu có → xuất JSON đúng schema
 
 ========================
-QUY TẮC XỬ LÝ THỜI GIAN
+QUY TẮC CỨNG
 
-- Phải chuyển mọi thời gian sang ISO 8601
-- Phải dựa trên THỜI GIAN HỆ THỐNG
-- Phải dùng múi giờ Asia/Ho_Chi_Minh
+Nếu tin nhắn có đủ:
+- Có @Tên
+- Có thời gian tương lai
+- Có động từ hành động
 
-QUY ƯỚC THỜI GIAN:
+👉 is_task = true
 
-- sáng  → 09:00
-- trưa  → 12:00
-- chiều → 14:00
-- tối   → 19:00
+========================
+QUY TẮC XỬ LÝ THỜI GIAN (BẮT BUỘC)
 
-Nếu không xác định được giờ chính xác:
+1. Tất cả thời gian phải convert sang ISO 8601
+2. Phải dùng timezone Asia/Ho_Chi_Minh
+3. Thời gian kết quả LUÔN phải nằm trong tương lai so với Current datetime
+
+⚠️ Nếu thời gian suy ra nhỏ hơn hoặc bằng Current datetime:
+→ Phải chuyển sang ngày gần nhất trong tương lai
+
+========================
+QUY ƯỚC BUỔI
+
+- sáng = 09:00
+- trưa = 12:00
+- chiều = 14:00
+- tối = 19:00
+
+========================
+QUY TẮC SUY LUẬN
+
+"3h chiều"
+→ Nếu đã qua 15:00 hôm nay → chuyển sang ngày mai 15:00
+
+"3h"
+→ hiểu là 15:00
+
+"mai"
+→ ngày tiếp theo
+
+"tuần sau"
+→ cùng thứ của tuần kế tiếp
+
+========================
+Nếu không xác định được giờ:
 → start_time = null
 
-Nếu không có thời gian nhắc:
+Nếu không có nhắc:
 → remind_time = null
 
 ========================
@@ -145,25 +166,22 @@ QUY TẮC TRÍCH XUẤT
 
 title:
 - Ngắn gọn
-- Rõ hành động chính
+- Rõ hành động
 
 description:
-- Viết đầy đủ nội dung công việc
+- Viết đầy đủ nội dung
 
 assignees:
-- Lấy danh sách tên sau ký tự "@"
-- Loại bỏ ký tự "@"
+- Lấy tên sau @
 
 ========================
 KHÔNG ĐƯỢC
 
 - Không giải thích
-- Không thêm text ngoài JSON
-- Không markdown
-- Không comment
+- Không text ngoài JSON
 
 ========================
-Schema JSON (PHẢI ĐÚNG 100%)
+Schema JSON
 
 {{
   "is_task": true | false,
@@ -175,7 +193,7 @@ Schema JSON (PHẢI ĐÚNG 100%)
 }}
 
 ========================
-TIN NHẮN CẦN PHÂN TÍCH:
+TIN NHẮN:
 "{message}"
 """
 
@@ -184,7 +202,6 @@ TIN NHẮN CẦN PHÂN TÍCH:
 
         data = extract_json(raw)
 
-        # ===== Safe fallback nếu model trả lỗi =====
         if not isinstance(data, dict):
             return {"is_task": False}
 
