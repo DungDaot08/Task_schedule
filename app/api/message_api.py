@@ -19,7 +19,7 @@ def send_message(data: MessageCreate, db: Session = Depends(get_db)):
     return msg
 
 
-@router.get("", response_model=list[MessageOut])
+@router.get("/", response_model=list[MessageOut])
 def list_messages(db: Session = Depends(get_db)):
     return (
         db.query(Message)
