@@ -1,5 +1,6 @@
 import time
 import logging
+from datetime import datetime
 
 from app.task_queue.redis_queue import pop_job
 from app.ai.llm_grok import parse_message
@@ -12,55 +13,112 @@ from app.models import Message
 # ========================
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s"
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 )
 
 logger = logging.getLogger("ai-worker")
 
 
-def run():
-    logger.info("🤖 AI Worker started, waiting for jobs...")
+def run_once():
+    run_id = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    logger.info(f"🚀 Worker triggered | run_id={run_id}")
 
-    while True:
+    try:
+        logger.info("⏳ Checking Redis queue...")
+        job = pop_job()
+
+        if not job:
+            logger.info("📭 No job found in queue")
+            return {"status": "empty", "run_id": run_id}
+
+        message_id = job.get("message_id")
+        logger.info(f"📩 Job received | message_id={message_id}")
+
+        db = SessionLocal()
+
         try:
-            logger.info("⏳ Waiting for job from Redis...")
-            job = pop_job()  # BLOCKING
-
-            message_id = job["message_id"]
-            logger.info(f"📩 Received job | message_id={message_id}")
-
-            db = SessionLocal()
-
+            logger.info(f"🔍 Fetching message | message_id={message_id}")
             msg = db.get(Message, message_id)
+
             if not msg:
                 logger.warning(
-                    f"⚠️ Message not found | message_id={message_id}")
-                db.close()
-                continue
+                    f"⚠️ Message not found | message_id={message_id}"
+                )
+                return {
+                    "status": "message_not_found",
+                    "message_id": message_id,
+                    "run_id": run_id
+                }
 
-            logger.info(f"🧠 Calling LLM | message_id={message_id}")
+            logger.info(
+                f"🧠 Calling LLM | message_id={message_id}"
+            )
+
             start = time.time()
-
             result = parse_message(msg.content)
-
             elapsed = round(time.time() - start, 2)
-            logger.info(f"⏱️ LLM done in {elapsed}s | message_id={message_id}")
+
+            logger.info(
+                f"⏱️ LLM done in {elapsed}s | message_id={message_id}"
+            )
 
             if result.get("is_task"):
+
                 logger.info(
-                    f"✅ Task detected | title='{result.get('title')}' | message_id={message_id}"
+                    f"✅ Task detected | title='{result.get('title')}'"
                 )
-                create_task(db, result, msg.sender_id, msg.id)
-                logger.info(f"📝 Task created | message_id={message_id}")
-            else:
-                logger.info(f"❌ Not a task | message_id={message_id}")
 
+                task = create_task(
+                    db,
+                    result,
+                    msg.sender_id,
+                    msg.id
+                )
+
+                logger.info(
+                    f"📝 Task created | task_id={task.id}"
+                )
+
+                # ⭐ QUAN TRỌNG: link message -> task
+                msg.generated_task_id = task.id
+                db.commit()
+
+                logger.info(
+                    f"🔗 Message linked to task | message_id={msg.id} | task_id={task.id}"
+                )
+
+                return {
+                    "status": "task_created",
+                    "message_id": message_id,
+                    "task_id": task.id,
+                    "elapsed": elapsed,
+                    "run_id": run_id
+                }
+
+            logger.info(
+                f"❌ Message is not a task | message_id={message_id}"
+            )
+
+            return {
+                "status": "not_a_task",
+                "message_id": message_id,
+                "elapsed": elapsed,
+                "run_id": run_id
+            }
+
+        finally:
             db.close()
+            logger.info(
+                f"🔒 DB session closed | message_id={message_id}"
+            )
 
-        except Exception as e:
-            logger.exception(f"🔥 Worker error: {e}")
-            time.sleep(2)  # tránh crash loop
+    except Exception as e:
+        logger.exception(
+            f"🔥 Worker crashed | run_id={run_id} | error={e}"
+        )
 
-
-if __name__ == "__main__":
-    run()
+        return {
+            "status": "error",
+            "error": str(e),
+            "run_id": run_id
+        }

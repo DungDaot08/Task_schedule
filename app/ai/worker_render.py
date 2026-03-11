@@ -25,19 +25,17 @@ def run_once():
 
     try:
         logger.info("⏳ Checking Redis queue...")
-        job = pop_job()  # NON-BLOCKING
+        job = pop_job()
 
         if not job:
             logger.info("📭 No job found in queue")
-            return {
-                "status": "empty",
-                "run_id": run_id
-            }
+            return {"status": "empty", "run_id": run_id}
 
         message_id = job.get("message_id")
         logger.info(f"📩 Job received | message_id={message_id}")
 
         db = SessionLocal()
+
         try:
             logger.info(f"🔍 Fetching message | message_id={message_id}")
             msg = db.get(Message, message_id)
@@ -55,21 +53,22 @@ def run_once():
             logger.info(
                 f"🧠 Calling LLM | message_id={message_id}"
             )
+
             start = time.time()
-
             result = parse_message(msg.content)
-
             elapsed = round(time.time() - start, 2)
+
             logger.info(
                 f"⏱️ LLM done in {elapsed}s | message_id={message_id}"
             )
 
             if result.get("is_task"):
+
                 logger.info(
-                    f"✅ Task detected | title='{result.get('title')}' | message_id={message_id}"
+                    f"✅ Task detected | title='{result.get('title')}'"
                 )
 
-                create_task(
+                task = create_task(
                     db,
                     result,
                     msg.sender_id,
@@ -77,12 +76,21 @@ def run_once():
                 )
 
                 logger.info(
-                    f"📝 Task created successfully | message_id={message_id}"
+                    f"📝 Task created | task_id={task.id}"
+                )
+
+                # ⭐ QUAN TRỌNG: link message -> task
+                msg.generated_task_id = task.id
+                db.commit()
+
+                logger.info(
+                    f"🔗 Message linked to task | message_id={msg.id} | task_id={task.id}"
                 )
 
                 return {
                     "status": "task_created",
                     "message_id": message_id,
+                    "task_id": task.id,
                     "elapsed": elapsed,
                     "run_id": run_id
                 }
@@ -108,6 +116,7 @@ def run_once():
         logger.exception(
             f"🔥 Worker crashed | run_id={run_id} | error={e}"
         )
+
         return {
             "status": "error",
             "error": str(e),

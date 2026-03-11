@@ -55,3 +55,10 @@ class TaskAssignee(Base):
     __table_args__ = (
         UniqueConstraint("task_id", "user_id", name="uq_task_user"),
     )
+
+
+generated_task_id = Column(
+    Integer,
+    ForeignKey("tasks.id"),
+    nullable=True
+)
