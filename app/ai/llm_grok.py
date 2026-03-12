@@ -4,6 +4,7 @@ import json
 import re
 from langchain_groq import ChatGroq
 from app.ai.prompt import PROMPT
+from app.ai.time_parser import parse_time
 
 GROQ_API_KEY = "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"
 
@@ -24,16 +25,143 @@ def extract_json(text: str) -> dict:
     return json.loads(match.group())
 
 
-def parse_message(message: str) -> dict:
-    try:
-        tz = pytz.timezone("Asia/Ho_Chi_Minh")
-        now_dt = datetime.now(tz)
-        current_time = now_dt.isoformat()
-        current_date = now_dt.strftime("%Y-%m-%d")
-        current_weekday = now_dt.strftime("%A")
+# ==============================
+# STEP 1
+# Extract task info + time text
+# ==============================
+def extract_task_info(message: str):
 
-        prompt = f"""
+    prompt = f"""
 Bạn là AI chuyên TRÍCH XUẤT CÔNG VIỆC từ tin nhắn tiếng Việt.
+
+========================
+NHIỆM VỤ
+
+1. Xác định có phải công việc hay không
+2. Trích xuất thông tin task
+3. Lấy CHÍNH XÁC CỤM THỜI GIAN ĐẦY ĐỦ trong câu
+
+========================
+QUY TẮC
+
+is_task = true nếu có:
+- @Tên
+- có hành động
+- có thời gian
+
+assignees:
+- lấy tên sau ký tự @
+
+========================
+QUY TẮC TIME_TEXT (RẤT QUAN TRỌNG)
+
+time_text phải là **toàn bộ cụm thời gian liên tục trong câu**.
+
+KHÔNG được bỏ phần giờ/phút.
+
+Nếu có:
+- giờ
+- phút
+- buổi (sáng/chiều/tối)
+- ngày (mai, thứ 6, tuần sau)
+
+→ phải lấy TẤT CẢ.
+
+Luôn ưu tiên **cụm dài nhất**.
+
+========================
+VÍ DỤ
+
+Input:
+"@Nguyen 8h30 sáng mai nộp báo cáo"
+
+Output:
+"time_text": "8h30 sáng mai"
+
+
+Input:
+"@Nam mai 3h họp"
+
+Output:
+"time_text": "mai 3h"
+
+
+Input:
+"@Lan thứ 6 14h gửi file"
+
+Output:
+"time_text": "thứ 6 14h"
+
+
+Input:
+"@Hùng 30 phút nữa gọi khách"
+
+Output:
+"time_text": "30 phút nữa"
+
+
+Input:
+"@Minh chiều mai nộp báo cáo"
+
+Output:
+"time_text": "chiều mai"
+
+========================
+KHÔNG được:
+- suy luận giờ
+- convert thời gian
+- cắt bớt cụm thời gian
+
+Chỉ COPY nguyên văn từ câu.
+
+========================
+OUTPUT JSON
+
+{{
+  "is_task": true | false,
+  "title": "string",
+  "description": "string",
+  "assignees": ["string"],
+  "time_text": "string hoặc null"
+}}
+
+========================
+TIN NHẮN:
+"{message}"
+"""
+
+    res = llm.invoke(prompt)
+    raw = res.content.strip()
+
+    data = extract_json(raw)
+
+    if not isinstance(data, dict):
+        return {"is_task": False}
+
+    data.setdefault("is_task", False)
+    data.setdefault("title", "")
+    data.setdefault("description", "")
+    data.setdefault("assignees", [])
+    data.setdefault("time_text", None)
+
+    return data
+
+
+# ==============================
+# STEP 2
+# Convert time_text -> ISO datetime
+# ==============================
+def parse_time_with_llm(time_text: str):
+
+    tz = pytz.timezone("Asia/Ho_Chi_Minh")
+    now_dt = datetime.now(tz)
+
+    current_time = now_dt.isoformat()
+    current_date = now_dt.strftime("%Y-%m-%d")
+    weekday = now_dt.strftime("%A")
+
+    prompt = f"""
+Bạn là AI chuyên CHUYỂN ĐỔI thời gian tiếng Việt sang ISO datetime.
 
 ========================
 THỜI GIAN HỆ THỐNG
@@ -45,121 +173,113 @@ Current date:
 {current_date}
 
 Current weekday:
-{current_weekday}
+{weekday}
 
 Timezone:
 Asia/Ho_Chi_Minh (UTC+7)
 
 ========================
-NHIỆM VỤ
+INPUT TIME TEXT
 
-1. Xác định có phải công việc hay không
-2. Nếu có → xuất JSON đúng schema
-
-========================
-QUY TẮC CỨNG
-
-Nếu tin nhắn có đủ:
-- Có @Tên
-- Có thời gian tương lai
-- Có động từ hành động
-
-👉 is_task = true
+"{time_text}"
 
 ========================
-QUY TẮC XỬ LÝ THỜI GIAN (BẮT BUỘC)
+QUY TẮC
 
-1. Tất cả thời gian phải convert sang ISO 8601
-2. Phải dùng timezone Asia/Ho_Chi_Minh
-3. Thời gian kết quả LUÔN phải nằm trong tương lai so với Current datetime
-
-⚠️ Nếu thời gian suy ra nhỏ hơn hoặc bằng Current datetime:
-→ Phải chuyển sang ngày gần nhất trong tương lai
+1. Convert sang ISO 8601
+2. Phải dùng timezone +07:00
+3. Kết quả phải là thời gian trong tương lai
 
 ========================
-QUY ƯỚC BUỔI
+QUY TẮC GIỜ
 
-- sáng = 09:00
-- trưa = 12:00
-- chiều = 14:00
-- tối = 19:00
+"sáng"
+→ giữ nguyên giờ
 
-========================
-QUY TẮC SUY LUẬN
+"chiều"
+→ giờ + 12 nếu < 12
 
-"3h chiều"
-→ Nếu đã qua 15:00 hôm nay → chuyển sang ngày mai 15:00
+"tối"
+→ giờ + 12
+
+Ví dụ:
+
+2 giờ chiều
+→ 14:00
+
+3 giờ chiều
+→ 15:00
+
+7 giờ tối
+→ 19:00
+
+Nếu chỉ có:
 
 "3h"
 → hiểu là 15:00
+
+========================
+QUY TẮC NGÀY
 
 "mai"
 → ngày tiếp theo
 
 "tuần sau"
-→ cùng thứ của tuần kế tiếp
+→ cùng thứ tuần sau
+
+"thứ 6"
+→ thứ 6 gần nhất trong tương lai
 
 ========================
-Nếu không xác định được giờ:
-→ start_time = null
-
-Nếu không có nhắc:
-→ remind_time = null
-
-========================
-QUY TẮC TRÍCH XUẤT
-
-title:
-- Ngắn gọn
-- Rõ hành động
-
-description:
-- Viết đầy đủ nội dung
-
-assignees:
-- Lấy tên sau @
-
-========================
-KHÔNG ĐƯỢC
-
-- Không giải thích
-- Không text ngoài JSON
-
-========================
-Schema JSON
+OUTPUT JSON
 
 {{
-  "is_task": true | false,
-  "title": "string",
-  "description": "string",
-  "assignees": ["string"],
-  "start_time": "ISO datetime",
-  "remind_time": "ISO datetime"
+  "start_time": "ISO datetime hoặc null"
 }}
-
-========================
-TIN NHẮN:
-"{message}"
 """
 
-        res = llm.invoke(prompt)
-        raw = res.content.strip()
+    res = llm.invoke(prompt)
+    raw = res.content.strip()
 
-        data = extract_json(raw)
+    data = extract_json(raw)
 
-        if not isinstance(data, dict):
+    if not data:
+        return None
+
+    return data.get("start_time")
+
+
+# ==============================
+# MAIN FUNCTION
+# ==============================
+def parse_message(message: str):
+
+    try:
+
+        # STEP 1: extract task
+        task = extract_task_info(message)
+
+        if not task.get("is_task"):
             return {"is_task": False}
 
-        # đảm bảo đủ key
-        data.setdefault("is_task", False)
-        data.setdefault("title", "")
-        data.setdefault("description", "")
-        data.setdefault("assignees", [])
-        data.setdefault("start_time", None)
-        data.setdefault("remind_time", None)
+        start_time = None
 
-        return data
+        # STEP 2: parse time
+        if task.get("time_text"):
+            # start_time = parse_time_with_llm(task["time_text"])
+            start_time = parse_time(task["time_text"])
+
+        result = {
+            "is_task": True,
+            "title": task.get("title"),
+            "description": task.get("description"),
+            "assignees": task.get("assignees"),
+            "start_time": start_time,
+            "remind_time": None
+        }
+
+        return result
 
     except Exception as e:
-        print("GROQ LLM ERROR:", e)
+        print("TASK PARSER ERROR:", e)
         return {"is_task": False}
