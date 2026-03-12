@@ -3,8 +3,8 @@ import pytz
 import json
 import re
 from langchain_groq import ChatGroq
-from app.ai.prompt import PROMPT
-from app.ai.time_parser import parse_time
+# from app.ai.prompt import PROMPT
+# from app.ai.time_parser import parse_time
 
 GROQ_API_KEY = "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"
 
@@ -35,14 +35,34 @@ def extract_task_info(message: str):
 Bạn là AI chuyên TRÍCH XUẤT CÔNG VIỆC từ tin nhắn tiếng Việt.
 
 ========================
-NHIỆM VỤ
+BƯỚC 1: CHUẨN HÓA TIN NHẮN
+
+Sửa các lỗi chính tả nhẹ nếu có, ví dụ:
+
+baos cáo → báo cáo
+ngy mai → ngày mai
+nop → nộp
+baoca → báo cáo
+
+Chỉ sửa lỗi chính tả phổ biến.
+KHÔNG được thay đổi ý nghĩa câu.
+KHÔNG được thay đổi định dạng thời gian.
+
+Ví dụ:
+"@Nguyen 8h30 sang mai nop baos cao"
+→ "@Nguyen 8h30 sáng mai nộp báo cáo"
+
+========================
+BƯỚC 2: TRÍCH XUẤT TASK
+
+NHIỆM VỤ:
 
 1. Xác định có phải công việc hay không
 2. Trích xuất thông tin task
-3. Lấy CHÍNH XÁC CỤM THỜI GIAN ĐẦY ĐỦ trong câu
+3. Lấy CHÍNH XÁC cụm thời gian
 
 ========================
-QUY TẮC
+QUY TẮC TASK
 
 is_task = true nếu có:
 - @Tên
@@ -67,7 +87,7 @@ Nếu có:
 
 → phải lấy TẤT CẢ.
 
-Luôn ưu tiên **cụm dài nhất**.
+Luôn lấy **cụm thời gian dài nhất**.
 
 ========================
 VÍ DỤ
@@ -80,39 +100,25 @@ Output:
 
 
 Input:
-"@Nam mai 3h họp"
+"@Lan t6 9h nop file"
 
 Output:
-"time_text": "mai 3h"
+"time_text": "t6 9h"
 
 
 Input:
-"@Lan thứ 6 14h gửi file"
-
-Output:
-"time_text": "thứ 6 14h"
-
-
-Input:
-"@Hùng 30 phút nữa gọi khách"
+"@Minh 30 phut nua goi khach"
 
 Output:
 "time_text": "30 phút nữa"
 
-
-Input:
-"@Minh chiều mai nộp báo cáo"
-
-Output:
-"time_text": "chiều mai"
-
 ========================
 KHÔNG được:
-- suy luận giờ
 - convert thời gian
+- suy luận giờ
 - cắt bớt cụm thời gian
 
-Chỉ COPY nguyên văn từ câu.
+Chỉ COPY nguyên văn cụm thời gian từ câu đã chuẩn hóa.
 
 ========================
 OUTPUT JSON
