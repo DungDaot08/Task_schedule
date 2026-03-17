@@ -22,15 +22,15 @@ app.add_middleware(
 )
 
 
-@app.get("/test")
-def test():
-    return {"message": "backend OK"}
-
-
 app.include_router(message_router)
 app.include_router(user_router)
 app.include_router(task_router)
 app.include_router(auth_router)
+
+
+@app.get("/test")
+def test():
+    return {"message": "backend OK"}
 
 
 @app.websocket("/ws")
