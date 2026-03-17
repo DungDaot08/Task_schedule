@@ -21,6 +21,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/test")
+def test():
+    return {"message": "backend OK"}
+
+
 app.include_router(message_router)
 app.include_router(user_router)
 app.include_router(task_router)
