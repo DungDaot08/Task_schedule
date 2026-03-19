@@ -15,6 +15,25 @@ llm = ChatGroq(
 )
 
 
+def clean_assignees(assignees):
+    if not assignees:
+        return []
+
+    cleaned = []
+    for a in assignees:
+        if not a:
+            continue
+
+        # bỏ khoảng trắng + bỏ ký tự @ đầu
+        a = a.strip()
+        if a.startswith("@"):
+            a = a[1:]
+
+        cleaned.append(a)
+
+    return cleaned
+
+
 def extract_json(text: str) -> dict:
     """
     LLM đôi khi trả thêm chữ → bóc JSON an toàn
@@ -258,7 +277,7 @@ OUTPUT JSON
 # ==============================
 # MAIN FUNCTION
 # ==============================
-def parse_message(message: str):
+def parse_message_1(message: str):
 
     try:
 
@@ -280,6 +299,40 @@ def parse_message(message: str):
             "title": task.get("title"),
             "description": task.get("description"),
             "assignees": task.get("assignees"),
+            "start_time": start_time,
+            "remind_time": None
+        }
+
+        return result
+
+    except Exception as e:
+        print("TASK PARSER ERROR:", e)
+        return {"is_task": False}
+
+
+def parse_message(message: str):
+
+    try:
+        # STEP 1: extract task
+        task = extract_task_info(message)
+
+        if not task.get("is_task"):
+            return {"is_task": False}
+
+        start_time = None
+
+        # STEP 2: parse time
+        if task.get("time_text"):
+            start_time = parse_time(task["time_text"])
+
+        # 👇 clean assignees tại đây
+        assignees = clean_assignees(task.get("assignees"))
+
+        result = {
+            "is_task": True,
+            "title": task.get("title"),
+            "description": task.get("description"),
+            "assignees": assignees,
             "start_time": start_time,
             "remind_time": None
         }
