@@ -32,23 +32,27 @@ def get_tasks(
         .all()
     )
 
+    from app.models import User
+
     result = []
 
     for task in tasks:
         assignees = (
-            db.query(TaskAssignee)
+            db.query(TaskAssignee, User)
+            .join(User, TaskAssignee.user_id == User.id)
             .filter(TaskAssignee.task_id == task.id)
             .all()
         )
 
         task_data = task.__dict__.copy()
-
-        # bỏ _sa_instance_state (SQLAlchemy internal)
         task_data.pop("_sa_instance_state", None)
 
         task_data["assignees"] = [
-            {"user_id": a.user_id}
-            for a in assignees
+            {
+                "user_id": a.user_id,
+                "username": u.username
+            }
+            for a, u in assignees
         ]
 
         result.append(task_data)
