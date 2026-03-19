@@ -32,4 +32,15 @@ def get_tasks(
         .all()
     )
 
-    return tasks
+    result = []
+
+    for task in tasks:
+        assignees = db.query(TaskAssignee).filter(
+            TaskAssignee.task_id == task.id).all()
+
+        result.append({
+            "id": task.id,
+            "assignees": [a.user_id for a in assignees]
+        })
+
+    return result

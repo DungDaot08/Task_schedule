@@ -12,7 +12,7 @@ class MessageOut(BaseModel):
     sender_id: int
     content: str
     created_at: datetime
-    generated_task_id: Optional[int] = None
+    # generated_task_id: Optional[int] = None
 
     class Config:
         from_attributes = True
