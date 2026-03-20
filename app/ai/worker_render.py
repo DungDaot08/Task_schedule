@@ -77,10 +77,8 @@ def run_once():
                     msg.id
                 )
 
-                # ⭐ Gửi realtime qua WebSocket
                 try:
-                    loop = asyncio.get_event_loop()
-                    loop.create_task(
+                    asyncio.run(
                         manager.send_to_user(
                             msg.sender_id,
                             {
@@ -92,8 +90,9 @@ def run_once():
                         )
                     )
                     logger.info(
-                        f"📡 WebSocket sent | user_id={msg.sender_id} | task_id={task.id}"
+                        f"📡 WebSocket sent | user_id={msg.sender_id}"
                     )
+
                 except Exception as ws_err:
                     logger.error(f"❌ WebSocket error: {ws_err}")
 
