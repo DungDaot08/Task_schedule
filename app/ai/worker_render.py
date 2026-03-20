@@ -7,6 +7,8 @@ from app.ai.llm_grok import parse_message
 from app.database import SessionLocal
 from app.crud import create_task
 from app.models import Message
+from app.ws.manager import manager
+import asyncio
 
 # ========================
 # LOGGING CONFIG
@@ -75,9 +77,29 @@ def run_once():
                     msg.id
                 )
 
-                logger.info(
-                    f"📝 Task created | task_id={task.id}"
-                )
+                # ⭐ Gửi realtime qua WebSocket
+                try:
+                    loop = asyncio.get_event_loop()
+                    loop.create_task(
+                        manager.send_to_user(
+                            msg.sender_id,
+                            {
+                                "type": "task_created",
+                                "message_id": msg.id,
+                                "task_id": task.id,
+                                "title": task.title
+                            }
+                        )
+                    )
+                    logger.info(
+                        f"📡 WebSocket sent | user_id={msg.sender_id} | task_id={task.id}"
+                    )
+                except Exception as ws_err:
+                    logger.error(f"❌ WebSocket error: {ws_err}")
+
+                # logger.info(
+                #    f"📝 Task created | task_id={task.id}"
+                # )
 
                 # ⭐ QUAN TRỌNG: link message -> task
                 msg.generated_task_id = task.id
