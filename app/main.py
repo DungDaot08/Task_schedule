@@ -1,3 +1,5 @@
+from app.api import ws
+from app.scheduler import start_scheduler, load_jobs_from_db
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.message import router as message_router
@@ -7,6 +9,15 @@ from app.api.auth import router as auth_router
 from app.api.ws import websocket_endpoint
 
 app = FastAPI()
+
+app.include_router(ws.router)
+
+
+@app.on_event("startup")
+def on_startup():
+    start_scheduler()
+    load_jobs_from_db()
+
 
 origins = [
     "http://localhost:3000",
