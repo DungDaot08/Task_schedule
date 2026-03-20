@@ -10,7 +10,7 @@ from app.api.ws import websocket_endpoint
 
 app = FastAPI()
 
-app.include_router(ws.router)
+# app.include_router(ws.router)
 
 
 @app.on_event("startup")
@@ -33,7 +33,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+app.include_router(ws.router)
 app.include_router(message_router)
 app.include_router(user_router)
 app.include_router(task_router)

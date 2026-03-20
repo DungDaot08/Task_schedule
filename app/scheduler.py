@@ -24,18 +24,19 @@ def schedule_task_reminder(task_id: int, user_id: int, run_time: datetime):
     def job():
         print(f"[SCHEDULER] Trigger task {task_id}")
 
-        # vì scheduler chạy sync → phải gọi async
-        loop = asyncio.get_event_loop()
-        loop.create_task(
-            manager.send_to_user(
-                user_id,
-                {
-                    "type": "task_reminder",
-                    "task_id": task_id,
-                    "message": "Bạn có task đến giờ!"
-                }
+        try:
+            asyncio.run(
+                manager.send_to_user(
+                    user_id,
+                    {
+                        "type": "task_reminder",
+                        "task_id": task_id,
+                        "message": "Bạn có task đến giờ!"
+                    }
+                )
             )
-        )
+        except Exception as e:
+            print("WebSocket send error:", e)
 
     scheduler.add_job(
         job,
