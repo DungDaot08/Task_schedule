@@ -4,6 +4,7 @@ from app.models import Task, TaskAssignee
 from sqlalchemy.orm import Session
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 
 from app.ws.manager import manager
@@ -49,7 +50,7 @@ def load_jobs_from_db():
     db: Session = SessionLocal()
 
     try:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         tasks = (
             db.query(Task)

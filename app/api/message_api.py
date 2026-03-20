@@ -44,3 +44,25 @@ def send_message(
     background_tasks.add_task(run_once)
 
     return msg
+
+
+@router.post("/messages", response_model=MessageOut)
+def send_message(
+    data: MessageCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    msg = create_message(db, data.sender_id, data.content)
+
+    push_job(msg.id)
+
+    # chạy background
+    background_tasks.add_task(run_once)
+
+    # 👇 chờ nhẹ (hack nhỏ)
+    import time
+    time.sleep(3)
+
+    db.refresh(msg)
+
+    return msg
