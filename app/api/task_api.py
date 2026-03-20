@@ -44,8 +44,13 @@ def get_tasks(
             .all()
         )
 
+        creator = db.query(User).filter(User.id == task.creator_id).first()
+
         task_data = task.__dict__.copy()
         task_data.pop("_sa_instance_state", None)
+
+        # 👇 bỏ creator_id
+        task_data.pop("creator_id", None)
 
         task_data["assignees"] = [
             {
@@ -54,6 +59,11 @@ def get_tasks(
             }
             for a, u in assignees
         ]
+
+        task_data["creator"] = {
+            "user_id": creator.id,
+            "username": creator.username
+        } if creator else None
 
         result.append(task_data)
 
