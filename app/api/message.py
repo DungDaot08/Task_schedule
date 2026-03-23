@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
-
+from fastapi import HTTPException
 from app.database import get_db
 from app.schemas import MessageCreate, MessageOut
 from app.models import Message
@@ -47,3 +47,13 @@ def list_messages(
         .order_by(Message.created_at.desc())
         .all()
     )
+
+
+@router.get("/{message_id}", response_model=MessageOut)
+def get_message(message_id: int, db: Session = Depends(get_db)):
+    message = db.query(Message).filter(Message.id == message_id).first()
+
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    return message
