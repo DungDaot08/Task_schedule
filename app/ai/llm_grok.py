@@ -329,6 +329,8 @@ def parse_message(message: str):
         # STEP 2: parse time
         if task.get("time_text"):
             start_time = parse_time(task["time_text"])
+            if isinstance(start_time, str):
+                start_time = datetime.fromisoformat(start_time)
 
             if start_time:
                 remind_time = start_time - timedelta(minutes=5)
