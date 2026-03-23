@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import json
 import re
@@ -330,6 +330,9 @@ def parse_message(message: str):
         if task.get("time_text"):
             start_time = parse_time(task["time_text"])
 
+            if start_time:
+                remind_time = start_time - timedelta(minutes=30)
+
         # 👇 clean assignees tại đây
         assignees = clean_assignees(task.get("assignees"))
 
@@ -339,7 +342,7 @@ def parse_message(message: str):
             "description": task.get("description"),
             "assignees": assignees,
             "start_time": start_time,
-            "remind_time": None
+            "remind_time": remind_time
         }
 
         return result

@@ -16,7 +16,7 @@ def start_scheduler():
     scheduler.start()
 
 
-def schedule_task_reminder(task_id: int, user_id: int, run_time: datetime):
+def schedule_task_reminder_1(task_id: int, user_id: int, run_time: datetime):
     """
     Schedule notify khi tới giờ
     """
@@ -85,3 +85,49 @@ def load_jobs_from_db():
 
     finally:
         db.close()
+
+
+def schedule_task_reminder(
+    task_id: int,
+    user_id: int,
+    run_time: datetime,
+    type: str = "start"   # 👈 mặc định
+):
+    """
+    Schedule notify khi tới giờ
+    """
+
+    # ❗ tránh schedule trong quá khứ
+    if run_time <= datetime.now(run_time.tzinfo):
+        return
+
+    def job():
+        print(f"[SCHEDULER] Trigger task {task_id} - {type}")
+
+        try:
+            if type == "remind":
+                msg = "⏰ Sắp đến giờ task!"
+            else:
+                msg = "🚀 Task bắt đầu!"
+
+            asyncio.run(
+                manager.send_to_user(
+                    user_id,
+                    {
+                        "type": "task_reminder",
+                        "task_id": task_id,
+                        "reminder_type": type,  # 👈 frontend phân biệt
+                        "message": msg
+                    }
+                )
+            )
+        except Exception as e:
+            print("WebSocket send error:", e)
+
+    scheduler.add_job(
+        job,
+        "date",
+        run_date=run_time,
+        id=f"task_{task_id}_{user_id}_{type}",  # 👈 tránh bị overwrite
+        replace_existing=True
+    )

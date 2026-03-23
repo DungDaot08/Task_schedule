@@ -50,8 +50,9 @@ def list_messages(
 
 
 @router.get("/{message_id}", response_model=MessageOut)
-def get_message(message_id: int, db: Session = Depends(get_db)):
-    message = db.query(Message).filter(Message.id == message_id).first()
+def get_message(message_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    message = db.query(Message).filter(Message.id == message_id).filter(
+        Message.sender_id == current_user.id).first()
 
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
