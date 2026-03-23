@@ -91,7 +91,7 @@ def schedule_task_reminder(
     task_id: int,
     user_id: int,
     run_time: datetime,
-    type: str = "start"   # 👈 mặc định
+    type: str    # 👈 mặc định
 ):
     """
     Schedule notify khi tới giờ
