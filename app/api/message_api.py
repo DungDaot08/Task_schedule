@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from app.schemas import MessageOut
 from app.models import Message
 from fastapi import APIRouter, Depends, BackgroundTasks
@@ -28,22 +29,14 @@ def list_messages(db: Session = Depends(get_db)):
     )
 
 
-@router.post("/messages", response_model=MessageOut)
-def send_message(
-    data: MessageCreate,
-    background_tasks: BackgroundTasks,   # ⭐ thêm
-    db: Session = Depends(get_db)
-):
-    # 1️⃣ Tạo message
-    msg = create_message(db, data.sender_id, data.content)
+@router.get("/{message_id}", response_model=MessageOut)
+def get_message(message_id: int, db: Session = Depends(get_db)):
+    message = db.query(Message).filter(Message.id == message_id).first()
 
-    # 2️⃣ Push queue
-    push_job(msg.id)
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
 
-    # 3️⃣ Trigger worker background
-    background_tasks.add_task(run_once)
-
-    return msg
+    return message
 
 
 @router.post("/messages", response_model=MessageOut)
