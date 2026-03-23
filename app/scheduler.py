@@ -47,7 +47,7 @@ def schedule_task_reminder_1(task_id: int, user_id: int, run_time: datetime):
     )
 
 
-def load_jobs_from_db():
+def load_jobs_from_db_old():
     db: Session = SessionLocal()
 
     try:
@@ -131,3 +131,55 @@ def schedule_task_reminder(
         id=f"task_{task_id}_{user_id}_{type}",  # 👈 tránh bị overwrite
         replace_existing=True
     )
+
+
+def load_jobs_from_db():
+    db: Session = SessionLocal()
+
+    try:
+        now = datetime.now(timezone.utc)
+
+        tasks = (
+            db.query(Task)
+            .filter(Task.start_time != None)
+            .all()
+        )
+
+        count = 0
+
+        for task in tasks:
+            user_ids = [task.creator_id]
+
+            assignees = (
+                db.query(TaskAssignee)
+                .filter(TaskAssignee.task_id == task.id)
+                .all()
+            )
+            user_ids += [a.user_id for a in assignees]
+
+            # 👇 schedule REMIND (nếu còn hạn)
+            if task.remind_time and task.remind_time > now:
+                for user_id in user_ids:
+                    schedule_task_reminder(
+                        task_id=task.id,
+                        user_id=user_id,
+                        run_time=task.remind_time,
+                        type="remind"
+                    )
+                count += 1
+
+            # 👇 schedule START (nếu còn hạn)
+            if task.start_time and task.start_time > now:
+                for user_id in user_ids:
+                    schedule_task_reminder(
+                        task_id=task.id,
+                        user_id=user_id,
+                        run_time=task.start_time,
+                        type="start"
+                    )
+                count += 1
+
+        print(f"[SCHEDULER] Loaded {count} jobs")
+
+    finally:
+        db.close()
