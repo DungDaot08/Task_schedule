@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 import pytz
 import json
@@ -6,7 +7,13 @@ from langchain_groq import ChatGroq
 # from app.ai.prompt import PROMPT
 from app.ai.time_parser import parse_time
 
-GROQ_API_KEY = "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"
+# GROQ_API_KEY = "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"
+
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+if not GROQ_API_KEY:
+    raise ValueError("Missing GROQ_API_KEY")
 
 llm = ChatGroq(
     api_key=GROQ_API_KEY,
