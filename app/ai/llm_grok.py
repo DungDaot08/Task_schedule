@@ -7,8 +7,6 @@ from langchain_groq import ChatGroq
 # from app.ai.prompt import PROMPT
 from app.ai.time_parser import parse_time
 
-# GROQ_API_KEY = "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"
-
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
