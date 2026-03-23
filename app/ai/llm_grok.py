@@ -331,7 +331,7 @@ def parse_message(message: str):
             start_time = parse_time(task["time_text"])
 
             if start_time:
-                remind_time = start_time - timedelta(minutes=30)
+                remind_time = start_time - timedelta(minutes=5)
 
         # 👇 clean assignees tại đây
         assignees = clean_assignees(task.get("assignees"))

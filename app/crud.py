@@ -115,7 +115,7 @@ def create_task(db: Session, data: dict, creator_id: int, message_id: int):
                 task_id=task.id,
                 user_id=user_id,
                 run_time=task.remind_time,
-                type="remind"   # 👈 thêm type để phân biệt
+                type="remind"
             )
 
     # 👇 start_time (đúng giờ)

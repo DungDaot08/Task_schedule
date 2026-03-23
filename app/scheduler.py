@@ -106,9 +106,9 @@ def schedule_task_reminder(
 
         try:
             if type == "remind":
-                msg = "⏰ Sắp đến giờ task!"
+                msg = "Sắp đến giờ task"
             else:
-                msg = "🚀 Task bắt đầu!"
+                msg = "Task bắt đầu"
 
             asyncio.run(
                 manager.send_to_user(
@@ -116,8 +116,8 @@ def schedule_task_reminder(
                     {
                         "type": "task_reminder",
                         "task_id": task_id,
-                        "reminder_type": type,  # 👈 frontend phân biệt
-                        "message": msg
+                        "reminder_type": type,  # type = 'remind' or 'start'
+                        "message": msg  # "Sắp đến giờ task" or "Task bắt đầu"
                     }
                 )
             )
