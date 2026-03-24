@@ -303,6 +303,7 @@ def parse_message_1(message: str):
             "is_task": True,
             "title": task.get("title"),
             "description": task.get("description"),
+            "description": message,
             "assignees": task.get("assignees"),
             "start_time": start_time,
             "remind_time": None
@@ -341,7 +342,8 @@ def parse_message(message: str):
         result = {
             "is_task": True,
             "title": task.get("title"),
-            "description": task.get("description"),
+            # "description": task.get("description"),
+            "description": message,
             "assignees": assignees,
             "start_time": start_time,
             "remind_time": remind_time

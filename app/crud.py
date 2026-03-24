@@ -115,6 +115,7 @@ def create_task(db: Session, data: dict, creator_id: int, message_id: int):
                 task_id=task.id,
                 user_id=user_id,
                 run_time=task.remind_time,
+                description=task.description,
                 type="remind"
             )
 
@@ -125,6 +126,7 @@ def create_task(db: Session, data: dict, creator_id: int, message_id: int):
                 task_id=task.id,
                 user_id=user_id,
                 run_time=task.start_time,
+                description=task.description,
                 type="start"
             )
 

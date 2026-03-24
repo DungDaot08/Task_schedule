@@ -91,6 +91,7 @@ def schedule_task_reminder(
     task_id: int,
     user_id: int,
     run_time: datetime,
+    description: str,
     type: str    # 👈 mặc định
 ):
     """
@@ -117,6 +118,7 @@ def schedule_task_reminder(
                         "type": "task_reminder",
                         "task_id": task_id,
                         "reminder_type": type,  # type = 'remind' or 'start'
+                        "description": description,
                         "message": msg  # "Sắp đến giờ task" or "Task bắt đầu"
                     }
                 )
@@ -164,6 +166,7 @@ def load_jobs_from_db():
                         task_id=task.id,
                         user_id=user_id,
                         run_time=task.remind_time,
+                        description=task.description,
                         type="remind"
                     )
                 count += 1
@@ -175,6 +178,7 @@ def load_jobs_from_db():
                         task_id=task.id,
                         user_id=user_id,
                         run_time=task.start_time,
+                        description=task.description,
                         type="start"
                     )
                 count += 1
