@@ -118,8 +118,8 @@ def schedule_task_reminder(
                         "type": "task_reminder",
                         "task_id": task_id,
                         "reminder_type": type,  # type = 'remind' or 'start'
-                        "description": description,
-                        "message": msg  # "Sắp đến giờ task" or "Task bắt đầu"
+                        # "description": description,
+                        "message": description,
                     }
                 )
             )
