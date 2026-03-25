@@ -22,7 +22,8 @@ def on_startup():
 origins = [
     "http://localhost:3000",
     "https://localhost:3000",
-    "https://your-frontend-domain.com"
+    "https://your-frontend-domain.com",
+    "https://tasksaivn.netlify.app"
 ]
 
 app.add_middleware(

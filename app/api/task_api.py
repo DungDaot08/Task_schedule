@@ -29,6 +29,7 @@ def get_tasks(
             )
         )
         .distinct()
+        .order_by(Task.id)
         .all()
     )
 
