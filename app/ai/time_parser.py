@@ -1,3 +1,4 @@
+from datetime import timedelta
 from datetime import datetime
 import re
 from datetime import datetime, timedelta
@@ -122,20 +123,25 @@ def parse_specific_date(text, base):
 
 
 def parse_relative(text):
-
     base = now()
+    text = text.lower()
 
-    m = re.search(r"(\d+)\s*phút.*nữa", text)
-    if m:
-        return base + timedelta(minutes=int(m.group(1)))
+    patterns = [
+        # phút: 10 phút nữa, 10p nữa
+        (r"(\d+)\s*(phút|p)\s*.*nữa", "minutes"),
 
-    m = re.search(r"(\d+)\s*(giờ|tiếng).*nữa", text)
-    if m:
-        return base + timedelta(hours=int(m.group(1)))
+        # giờ: 5 giờ nữa, 5 tiếng nữa, 5h nữa
+        (r"(\d+)\s*(giờ|tiếng|h)\s*.*nữa", "hours"),
 
-    m = re.search(r"(\d+)\s*ngày.*nữa", text)
-    if m:
-        return base + timedelta(days=int(m.group(1)))
+        # ngày: 3 ngày nữa, 3 hôm nữa
+        (r"(\d+)\s*(ngày|hôm)\s*.*nữa", "days"),
+    ]
+
+    for pattern, unit in patterns:
+        m = re.search(pattern, text)
+        if m:
+            value = int(m.group(1))
+            return base + timedelta(**{unit: value})
 
     return None
 
