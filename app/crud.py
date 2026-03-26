@@ -130,4 +130,4 @@ def create_task(db: Session, data: dict, creator_id: int, message_id: int):
                 type="start"
             )
 
-    return task
+    return task, assignee_ids

@@ -70,32 +70,37 @@ def run_once():
                     f"✅ Task detected | title='{result.get('title')}'"
                 )
 
-                task = create_task(
+                task, assignee_ids = create_task(
                     db,
                     result,
                     msg.sender_id,
                     msg.id
                 )
 
-                try:
-                    asyncio.run(
-                        manager.send_to_user(
-                            msg.sender_id,
-                            {
-                                "type": "task_created",
-                                "message_id": msg.id,
-                                "task_id": task.id,
-                                "title": task.title
-                            }
+                recipients = set([msg.sender_id] + assignee_ids)
+
+                payload = {
+                    "message_id": msg.id,
+                    "task_id": task.id,
+                    "title": task.title
+                }
+
+                for user_id in recipients:
+                    try:
+                        asyncio.run(
+                            manager.send_to_user(
+                                user_id,
+                                {
+                                    **payload,
+                                    "type": "task_created" if user_id == msg.sender_id else "task_assigned"
+                                }
+                            )
                         )
-                    )
-                    logger.info(
-                        f"📡 WebSocket sent | user_id={msg.sender_id}"
-                    )
+                        logger.info(f"📡 WS sent | user_id={user_id}")
 
-                except Exception as ws_err:
-                    logger.error(f"❌ WebSocket error: {ws_err}")
-
+                    except Exception as ws_err:
+                        logger.error(
+                            f"❌ WS error | user_id={user_id} | err={ws_err}")
                 # logger.info(
                 #    f"📝 Task created | task_id={task.id}"
                 # )
