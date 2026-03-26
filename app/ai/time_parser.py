@@ -1,3 +1,4 @@
+from datetime import datetime
 import re
 from datetime import datetime, timedelta
 import pytz
@@ -89,28 +90,33 @@ def parse_time_of_day(text):
 # RELATIVE TIME
 # ==============================
 
+
 def parse_specific_date(text, base):
+    patterns = [
+        r"(\d{1,2})[\/\-](\d{1,2})",              # 30/3, 30-3
+        r"(\d{1,2})\.(\d{1,2})",                 # 30.3
+        r"(\d{1,2})\s*tháng\s*(\d{1,2})",        # 30 tháng 3
+        r"(\d{1,2})\s*thang\s*(\d{1,2})",        # 30 thang 3 (không dấu)
+    ]
 
-    # match: 30/3 hoặc 30-3
-    m = re.search(r"(\d{1,2})[\/\-](\d{1,2})", text)
+    for pattern in patterns:
+        m = re.search(pattern, text.lower())
+        if m:
+            day = int(m.group(1))
+            month = int(m.group(2))
+            year = base.year
 
-    if m:
-        day = int(m.group(1))
-        month = int(m.group(2))
+            try:
+                dt = base.replace(year=year, month=month, day=day)
 
-        year = base.year
+                # nếu ngày đã qua → sang năm sau
+                if dt < base:
+                    dt = dt.replace(year=year + 1)
 
-        try:
-            dt = base.replace(year=year, month=month, day=day)
+                return dt
 
-            # nếu ngày đã qua → sang năm sau
-            if dt < base:
-                dt = dt.replace(year=year + 1)
-
-            return dt
-
-        except ValueError:
-            return None
+            except ValueError:
+                return None
 
     return None
 
@@ -269,7 +275,7 @@ def parse_time(text: str):
 
         return dt.isoformat()
 
-# specific
+    # specific
 
     specific = parse_specific_date(text, base)
 
