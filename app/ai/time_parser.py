@@ -89,6 +89,32 @@ def parse_time_of_day(text):
 # RELATIVE TIME
 # ==============================
 
+def parse_specific_date(text, base):
+
+    # match: 30/3 hoặc 30-3
+    m = re.search(r"(\d{1,2})[\/\-](\d{1,2})", text)
+
+    if m:
+        day = int(m.group(1))
+        month = int(m.group(2))
+
+        year = base.year
+
+        try:
+            dt = base.replace(year=year, month=month, day=day)
+
+            # nếu ngày đã qua → sang năm sau
+            if dt < base:
+                dt = dt.replace(year=year + 1)
+
+            return dt
+
+        except ValueError:
+            return None
+
+    return None
+
+
 def parse_relative(text):
 
     base = now()
@@ -243,6 +269,13 @@ def parse_time(text: str):
 
         return dt.isoformat()
 
+# specific
+
+    specific = parse_specific_date(text, base)
+
+    if specific:
+        dt = apply_time(specific, hour, minute)
+        return dt.isoformat()
     # ---------------------------
     # weekday
     # ---------------------------

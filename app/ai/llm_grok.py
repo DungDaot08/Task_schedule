@@ -6,8 +6,9 @@ import re
 from langchain_groq import ChatGroq
 # from app.ai.prompt import PROMPT
 from app.ai.time_parser import parse_time
+# from time_parser import parse_time
 
-
+# GROQ_API_KEY = "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"
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 if not GROQ_API_KEY:
@@ -316,6 +317,14 @@ def parse_message_1(message: str):
         return {"is_task": False}
 
 
+def extract_assignees_regex(text: str):
+    # Lấy tất cả chuỗi sau @, dừng ở space hoặc ký tự đặc biệt
+    matches = re.findall(r"@([^\s@]+)", text)
+
+    # Optional: remove duplicate
+    return list(dict.fromkeys(matches))
+
+
 def parse_message(message: str):
 
     try:
@@ -337,7 +346,8 @@ def parse_message(message: str):
                 remind_time = start_time - timedelta(minutes=5)
 
         # 👇 clean assignees tại đây
-        assignees = clean_assignees(task.get("assignees"))
+        assignees = extract_assignees_regex(message)
+        # assignees = clean_assignees(task.get("assignees"))
 
         result = {
             "is_task": True,
