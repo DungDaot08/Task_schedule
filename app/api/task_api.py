@@ -69,3 +69,69 @@ def get_tasks(
         result.append(task_data)
 
     return result
+
+
+@router.delete("/{task_id}")
+def delete_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    task = db.query(Task).filter(Task.id == task_id).first()
+
+    if not task:
+        return {"error": "Task không tồn tại"}
+
+    # 👇 chỉ cho creator xóa
+    if task.creator_id != current_user.id:
+        return {"error": "Không có quyền xóa task"}
+
+    # xóa assignees trước
+    db.query(TaskAssignee).filter(TaskAssignee.task_id == task_id).delete()
+
+    # xóa task
+    db.delete(task)
+    db.commit()
+
+    return {"message": "Xóa task thành công"}
+
+
+@router.patch("/{task_id}")
+def update_task(
+    task_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    task = db.query(Task).filter(Task.id == task_id).first()
+
+    if not task:
+        return {"error": "Task không tồn tại"}
+
+    # 👇 chỉ creator được sửa
+    if task.creator_id != current_user.id:
+        return {"error": "Không có quyền chỉnh sửa task"}
+
+    # ===== update fields =====
+    if "title" in data:
+        task.title = data["title"]
+
+    if "description" in data:
+        task.description = data["description"]
+
+    if "start_time" in data:
+        task.start_time = data["start_time"]
+
+    if "remind_time" in data:
+        task.remind_time = data["remind_time"]
+
+    # 👇 thêm status
+    if "status" in data:
+        if data["status"] not in ["pending", "completed"]:
+            return {"error": "Status không hợp lệ"}
+        task.status = data["status"]
+
+    db.commit()
+    db.refresh(task)
+
+    return {"message": "Cập nhật thành công", "task_id": task.id}
