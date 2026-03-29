@@ -77,6 +77,25 @@ def run_once():
                     msg.id
                 )
 
+                try:
+                    asyncio.run(
+                        manager.send_to_user(
+                            msg.sender_id,
+                            {
+                                "type": "task_created",
+                                "message_id": msg.id,
+                                "task_id": task.id,
+                                "title": task.title
+                            }
+                        )
+                    )
+                    logger.info(
+                        f"📡 WebSocket sent | user_id={msg.sender_id}"
+                    )
+
+                except Exception as ws_err:
+                    logger.error(f"❌ WebSocket error: {ws_err}")
+
                 recipients = set([msg.sender_id] + assignee_ids)
 
                 payload = {

@@ -4,6 +4,10 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session, joinedload
+from app.scheduler import (
+    schedule_task_reminder,
+    remove_all_task_schedules
+)
 
 from app.database import get_db
 from app.models import Task
@@ -71,6 +75,66 @@ def get_tasks(
     return result
 
 
+@router.get("/by-status")
+def get_tasks_by_status(
+    status: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    if status not in ["pending", "accepted", "completed"]:
+        return {"error": "Status không hợp lệ"}
+
+    tasks = (
+        db.query(Task)
+        .outerjoin(TaskAssignee)
+        .filter(
+            Task.status == status,
+            or_(
+                Task.creator_id == current_user.id,
+                TaskAssignee.user_id == current_user.id
+            )
+        )
+        .distinct()
+        .order_by(Task.id)
+        .all()
+    )
+
+    from app.models import User
+
+    result = []
+
+    for task in tasks:
+        assignees = (
+            db.query(TaskAssignee, User)
+            .join(User, TaskAssignee.user_id == User.id)
+            .filter(TaskAssignee.task_id == task.id)
+            .all()
+        )
+
+        creator = db.query(User).filter(User.id == task.creator_id).first()
+
+        task_data = task.__dict__.copy()
+        task_data.pop("_sa_instance_state", None)
+        task_data.pop("creator_id", None)
+
+        task_data["assignees"] = [
+            {
+                "user_id": a.user_id,
+                "username": u.username
+            }
+            for a, u in assignees
+        ]
+
+        task_data["creator"] = {
+            "user_id": creator.id,
+            "username": creator.username
+        } if creator else None
+
+        result.append(task_data)
+
+    return result
+
+
 @router.delete("/{task_id}")
 def delete_task(
     task_id: int,
@@ -82,11 +146,20 @@ def delete_task(
     if not task:
         return {"error": "Task không tồn tại"}
 
-    # 👇 chỉ cho creator xóa
     if task.creator_id != current_user.id:
         return {"error": "Không có quyền xóa task"}
 
-    # xóa assignees trước
+    # 👇 lấy user_ids (creator + assignees)
+    assignees = db.query(TaskAssignee).filter(
+        TaskAssignee.task_id == task_id
+    ).all()
+
+    user_ids = [task.creator_id] + [a.user_id for a in assignees]
+
+    # ✅ remove schedule
+    remove_all_task_schedules(task.id, user_ids)
+
+    # xóa assignees
     db.query(TaskAssignee).filter(TaskAssignee.task_id == task_id).delete()
 
     # xóa task
@@ -108,9 +181,18 @@ def update_task(
     if not task:
         return {"error": "Task không tồn tại"}
 
-    # 👇 chỉ creator được sửa
     if task.creator_id != current_user.id:
         return {"error": "Không có quyền chỉnh sửa task"}
+
+    # 👇 lấy user_ids
+    assignees = db.query(TaskAssignee).filter(
+        TaskAssignee.task_id == task.id
+    ).all()
+
+    user_ids = [task.creator_id] + [a.user_id for a in assignees]
+
+    # ❌ remove old schedules
+    remove_all_task_schedules(task.id, user_ids)
 
     # ===== update fields =====
     if "title" in data:
@@ -125,13 +207,32 @@ def update_task(
     if "remind_time" in data:
         task.remind_time = data["remind_time"]
 
-    # 👇 thêm status
     if "status" in data:
-        if data["status"] not in ["pending", "completed"]:
+        if data["status"] not in ["pending", "accepted", "completed"]:
             return {"error": "Status không hợp lệ"}
         task.status = data["status"]
 
     db.commit()
     db.refresh(task)
+
+    # ✅ schedule lại (chỉ khi còn future)
+    for user_id in user_ids:
+        if task.remind_time:
+            schedule_task_reminder(
+                task_id=task.id,
+                user_id=user_id,
+                run_time=task.remind_time,
+                description=task.description,
+                type="remind"
+            )
+
+        if task.start_time:
+            schedule_task_reminder(
+                task_id=task.id,
+                user_id=user_id,
+                run_time=task.start_time,
+                description=task.description,
+                type="start"
+            )
 
     return {"message": "Cập nhật thành công", "task_id": task.id}

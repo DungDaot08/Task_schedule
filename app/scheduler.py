@@ -116,3 +116,15 @@ def load_jobs_from_db():
 
     finally:
         db.close()
+
+
+def remove_all_task_schedules(task_id: int, user_ids: list[int]):
+    for user_id in user_ids:
+        for type in ["remind", "start"]:
+            job_id = f"task_{task_id}_{user_id}_{type}"
+
+            try:
+                scheduler.remove_job(job_id)
+                print(f"[SCHEDULER] Removed job {job_id}")
+            except Exception:
+                pass
