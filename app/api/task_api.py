@@ -206,14 +206,13 @@ def update_task(
             return {"error": "Status không hợp lệ"}
         task.status = data["status"]
 
+    remove_all_task_schedules(task.id, user_ids)
+
     db.commit()
     db.refresh(task)
 
     # ✅ chỉ xử lý schedule khi status = accepted
     if task.status == "accepted":
-
-        # ❌ remove old schedules
-        remove_all_task_schedules(task.id, user_ids)
 
         # ✅ schedule lại
         for user_id in user_ids:
