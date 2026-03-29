@@ -181,18 +181,12 @@ def update_task(
     if not task:
         return {"error": "Task không tồn tại"}
 
-    if task.creator_id != current_user.id:
-        return {"error": "Không có quyền chỉnh sửa task"}
-
-    # 👇 lấy user_ids
+    # 👇 lấy assignees
     assignees = db.query(TaskAssignee).filter(
         TaskAssignee.task_id == task.id
     ).all()
 
     user_ids = [task.creator_id] + [a.user_id for a in assignees]
-
-    # ❌ remove old schedules
-    remove_all_task_schedules(task.id, user_ids)
 
     # ===== update fields =====
     if "title" in data:
@@ -215,24 +209,30 @@ def update_task(
     db.commit()
     db.refresh(task)
 
-    # ✅ schedule lại (chỉ khi còn future)
-    for user_id in user_ids:
-        if task.remind_time:
-            schedule_task_reminder(
-                task_id=task.id,
-                user_id=user_id,
-                run_time=task.remind_time,
-                description=task.description,
-                type="remind"
-            )
+    # ✅ chỉ xử lý schedule khi status = accepted
+    if task.status == "accepted":
 
-        if task.start_time:
-            schedule_task_reminder(
-                task_id=task.id,
-                user_id=user_id,
-                run_time=task.start_time,
-                description=task.description,
-                type="start"
-            )
+        # ❌ remove old schedules
+        remove_all_task_schedules(task.id, user_ids)
+
+        # ✅ schedule lại
+        for user_id in user_ids:
+            if task.remind_time:
+                schedule_task_reminder(
+                    task_id=task.id,
+                    user_id=user_id,
+                    run_time=task.remind_time,
+                    description=task.description,
+                    type="remind"
+                )
+
+            if task.start_time:
+                schedule_task_reminder(
+                    task_id=task.id,
+                    user_id=user_id,
+                    run_time=task.start_time,
+                    description=task.description,
+                    type="start"
+                )
 
     return {"message": "Cập nhật thành công", "task_id": task.id}
