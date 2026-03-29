@@ -109,25 +109,25 @@ def create_task(db: Session, data: dict, creator_id: int, message_id: int):
     user_ids = [creator_id] + assignee_ids
 
     # 👇 remind_time (trước giờ)
-    if task.remind_time:
-        for user_id in user_ids:
-            schedule_task_reminder(
-                task_id=task.id,
-                user_id=user_id,
-                run_time=task.remind_time,
-                description=task.description,
-                type="remind"
+    # if task.remind_time:
+    #   for user_id in user_ids:
+    #       schedule_task_reminder(
+    #           task_id=task.id,
+    #           user_id=user_id,
+    #           run_time=task.remind_time,
+    #           description=task.description,
+    #           type="remind"
             )
 
     # 👇 start_time (đúng giờ)
-    if task.start_time:
-        for user_id in user_ids:
-            schedule_task_reminder(
-                task_id=task.id,
-                user_id=user_id,
-                run_time=task.start_time,
-                description=task.description,
-                type="start"
-            )
+    # if task.start_time:
+    #   for user_id in user_ids:
+    #       schedule_task_reminder(
+    #           task_id=task.id,
+    #           user_id=user_id,
+    #           run_time=task.start_time,
+    #           description=task.description,
+    #           type="start"
+    #       )
 
     return task, assignee_ids
