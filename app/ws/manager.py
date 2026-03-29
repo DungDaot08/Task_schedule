@@ -20,5 +20,13 @@ class ConnectionManager:
         if ws:
             await ws.send_json(data)
 
+    async def broadcast(self, data: dict):
+        for user_id, ws in list(self.active_connections.items()):
+            try:
+                await ws.send_json(data)
+            except:
+                # nếu socket die thì remove luôn
+                self.disconnect(user_id)
+
 
 manager = ConnectionManager()
