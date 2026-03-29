@@ -1,4 +1,4 @@
-from app.ws import manager  # nhớ import
+from app.ws.manager import manager  # nhớ import
 from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
