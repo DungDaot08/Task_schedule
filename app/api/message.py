@@ -1,3 +1,4 @@
+from fastapi import Query
 from app.models import Message, User
 from app.ws.manager import manager  # nhớ import
 from fastapi import APIRouter, Depends, BackgroundTasks
@@ -98,16 +99,26 @@ def list_messages(
 
 @router.get("/all")
 def list_messages(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, le=100),
     db: Session = Depends(get_db),
 ):
-    results = (
+    query = (
         db.query(Message, User.username)
         .join(User, User.id == Message.sender_id)
+    )
+
+    total = query.count()
+
+    results = (
+        query
         .order_by(Message.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
         .all()
     )
 
-    return [
+    data = [
         {
             "id": msg.id,
             "content": msg.content,
@@ -117,6 +128,16 @@ def list_messages(
         }
         for msg, username in results
     ]
+
+    return {
+        "data": data,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": (total + page_size - 1) // page_size,
+        }
+    }
 
 
 @router.get("/{message_id}", response_model=MessageOut)
