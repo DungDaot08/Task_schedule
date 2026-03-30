@@ -1,3 +1,4 @@
+from app.models import Message, User
 from app.ws.manager import manager  # nhớ import
 from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
@@ -83,7 +84,7 @@ def list_messages(
     )
 
 
-@router.get("/all", response_model=list[MessageOut])
+@router.get("/all_old", response_model=list[MessageOut])
 def list_messages(
     db: Session = Depends(get_db),
 ):
@@ -93,6 +94,29 @@ def list_messages(
         .order_by(Message.created_at.desc())
         .all()
     )
+
+
+@router.get("/all")
+def list_messages(
+    db: Session = Depends(get_db),
+):
+    results = (
+        db.query(Message, User.username)
+        .join(User, User.id == Message.sender_id)
+        .order_by(Message.created_at.desc())
+        .all()
+    )
+
+    return [
+        {
+            "id": msg.id,
+            "content": msg.content,
+            "sender_id": msg.sender_id,
+            "username": username,
+            "created_at": msg.created_at,
+        }
+        for msg, username in results
+    ]
 
 
 @router.get("/{message_id}", response_model=MessageOut)
