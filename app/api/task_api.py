@@ -1,3 +1,5 @@
+from fastapi import Query
+from sqlalchemy.orm import selectinload
 from app.auth.deps import get_current_user
 from app.models import Task, TaskAssignee
 from sqlalchemy import or_
@@ -17,7 +19,7 @@ from app.schemas import TaskOut
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
-@router.get("")
+@router.get("/old")
 def get_tasks(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -75,7 +77,60 @@ def get_tasks(
     return result
 
 
-@router.get("/by-status")
+@router.get("")
+def get_tasks(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    tasks = (
+        db.query(Task)
+        .options(
+            selectinload(Task.creator),  # load creator
+            selectinload(Task.assignees).selectinload(
+                TaskAssignee.user)  # load assignees + user
+        )
+        .outerjoin(TaskAssignee)
+        .filter(
+            or_(
+                Task.creator_id == current_user.id,
+                TaskAssignee.user_id == current_user.id
+            )
+        )
+        .distinct()
+        .order_by(Task.id)
+        .all()
+    )
+
+    result = []
+
+    for task in tasks:
+        result.append({
+            "id": task.id,
+            "title": task.title,
+            "description": task.description,
+            "start_time": task.start_time,
+            "remind_time": task.remind_time,
+            "created_at": task.created_at,
+            "status": task.status,
+
+            "creator": {
+                "user_id": task.creator.id,
+                "username": task.creator.username
+            } if task.creator else None,
+
+            "assignees": [
+                {
+                    "user_id": a.user.id,
+                    "username": a.user.username
+                }
+                for a in task.assignees
+            ]
+        })
+
+    return result
+
+
+@router.get("/by-status-old")
 def get_tasks_by_status(
     status: str,
     db: Session = Depends(get_db),
@@ -131,6 +186,63 @@ def get_tasks_by_status(
         } if creator else None
 
         result.append(task_data)
+
+    return result
+
+
+@router.get("/by-status")
+def get_tasks_by_status(
+    status: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    if status not in ["pending", "accepted", "completed"]:
+        return {"error": "Status không hợp lệ"}
+
+    tasks = (
+        db.query(Task)
+        .options(
+            selectinload(Task.creator),
+            selectinload(Task.assignees).selectinload(TaskAssignee.user)
+        )
+        .outerjoin(TaskAssignee)
+        .filter(
+            Task.status == status,
+            or_(
+                Task.creator_id == current_user.id,
+                TaskAssignee.user_id == current_user.id
+            )
+        )
+        .distinct()
+        .order_by(Task.id.desc())
+        .all()
+    )
+
+    result = []
+
+    for task in tasks:
+        result.append({
+            "id": task.id,
+            "title": task.title,
+            "description": task.description,
+            "start_time": task.start_time,
+            "remind_time": task.remind_time,
+            "created_at": task.created_at,
+            "status": task.status,
+
+            "creator": {
+                "user_id": task.creator.id,
+                "username": task.creator.username
+            } if task.creator else None,
+
+            "assignees": [
+                {
+                    "user_id": a.user.id,
+                    "username": a.user.username
+                }
+                for a in task.assignees
+            ]
+        })
 
     return result
 
