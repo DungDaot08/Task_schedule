@@ -1,4 +1,5 @@
 # from app.scheduler import schedule_task_reminder
+import pytz
 from app.database import SessionLocal
 from app.models import Task, TaskAssignee
 from sqlalchemy.orm import Session
@@ -17,7 +18,7 @@ def start_scheduler():
     scheduler.start()
 
 
-def schedule_task_reminder(
+def schedule_task_reminder_1(
     task_id: UUID,
     user_id: UUID,
     run_time: datetime,
@@ -77,6 +78,51 @@ def schedule_task_reminder(
         run_date=run_time,
         # id=f"task_{task_id}_{user_id}_{type}",  # 👈 tránh bị overwrite
         id=f"task_{str(task_id)}_{str(user_id)}_{type}",
+        replace_existing=True
+    )
+
+
+def schedule_task_reminder(
+    task_id,
+    user_id,
+    run_time,
+    description,
+    type
+):
+    tz = pytz.timezone("Asia/Ho_Chi_Minh")
+
+    # ✅ đảm bảo run_time có timezone
+    if run_time.tzinfo is None:
+        run_time = tz.localize(run_time)
+
+    # ✅ so sánh chuẩn UTC
+    now = datetime.now(timezone.utc)
+    if run_time.astimezone(timezone.utc) <= now:
+        print("⚠️ Skip job in the past")
+        return
+
+    def job():
+        print(f"[SCHEDULER] Trigger task {task_id} - {type}")
+
+        try:
+            publish_event({
+                "type": "task_reminder",
+                "user_id": str(user_id),
+                "data": {
+                    "task_id": str(task_id),
+                    "reminder_type": type,
+                    "message": description,
+                }
+            })
+
+        except Exception as e:
+            print("WebSocket send error:", e)
+
+    scheduler.add_job(
+        job,
+        "date",
+        run_date=run_time,
+        id=f"task_{task_id}_{user_id}_{type}",
         replace_existing=True
     )
 
