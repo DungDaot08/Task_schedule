@@ -32,12 +32,14 @@ async def send_message(
     db.refresh(msg)
 
     # ✅ push WS realtime
+    def to_dict(obj):
+        return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
+
     await manager.broadcast({
         "type": "new_message",
         "data": {
-            "id": msg.id,
-            "content": msg.content,
-            "sender_id": msg.sender_id
+            **to_dict(msg),
+            "username": current_user.username
         }
     })
 
