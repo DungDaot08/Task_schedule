@@ -1,5 +1,6 @@
 from typing import Dict, List
 from fastapi import WebSocket
+import os
 
 
 class ConnectionManager:
@@ -7,6 +8,7 @@ class ConnectionManager:
         # user_id (string) -> websocket
         self.active_connections: Dict[str, WebSocket] = {}
         # self.active_connections: Dict[str, List[WebSocket]]
+        print("🔥 INIT MANAGER - PID:", os.getpid())
 
     async def connect(self, user_id, websocket: WebSocket):
         await websocket.accept()
