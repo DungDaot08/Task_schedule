@@ -27,6 +27,7 @@ class ConnectionManager:
     async def send_to_user(self, user_id, data: dict):
         user_id = str(user_id)
         ws = self.active_connections.get(str(user_id))
+        print("🔥 INIT MANAGER - PID:", os.getpid())
 
         if not ws:
             print(f"❌ No WS connection for user {user_id}")
