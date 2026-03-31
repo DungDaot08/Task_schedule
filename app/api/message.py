@@ -62,9 +62,9 @@ async def send_message(
     })
 
     # push_job(msg.id)
-    # push_job(str(msg.id))
-    # await run_once()  # 👈 chạy cùng process
-    print("🔥 SEND MESSAGE PID:", os.getpid())
+    push_job(str(msg.id))
+    await run_once()  # 👈 chạy cùng process
+    # print("🔥 SEND MESSAGE PID:", os.getpid())
 
     return msg
 
