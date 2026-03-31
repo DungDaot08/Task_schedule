@@ -116,6 +116,10 @@ def schedule_task_reminder(
             }
         })
 
+    print("NOW:", datetime.now(tz))
+
+    print("RUN:", run_time)
+
     scheduler.add_job(
         job,
         "date",

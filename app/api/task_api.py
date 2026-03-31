@@ -214,7 +214,7 @@ def update_task(
     db.refresh(task)
 
     # ✅ chỉ xử lý schedule khi status = accepted
-    if task.status == "Đang chờ":
+    if task.status == "Đã chấp nhận":
 
         # ✅ schedule lại
         for user_id in user_ids:
