@@ -53,7 +53,8 @@ async def send_message(
 
     # push_job(msg.id)
     push_job(str(msg.id))
-    background_tasks.add_task(run_once)
+    await run_once()  # 👈 chạy cùng process
+    # background_tasks.add_task(run_once)
 
     return msg
 
