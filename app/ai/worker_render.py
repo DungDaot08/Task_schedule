@@ -86,34 +86,6 @@ async def run_once():
                     msg.id
                 )
 
-                try:
-                    # await manager.send_to_user(
-                    #    msg.sender_id,
-                    #    {
-                    #        "type": "task_created",
-                    #        "data": {
-                    #                "message_id": to_str(msg.id),
-                    #                "task_id": to_str(task.id),
-                    #                "title": task.title
-                    #        }
-                    #    }
-                    # )
-                    publish_event(
-                        {
-                            "type": "task_created",
-                            "user_id": str(msg.sender_id),
-                            "data": {
-                                    "message_id": to_str(msg.id),
-                                    "task_id": to_str(task.id),
-                                    "title": task.title
-                            }
-                        }
-                    )
-                    logger.info(f"📡 WebSocket sent | user_id={msg.sender_id}")
-
-                except Exception as ws_err:
-                    logger.error(f"❌ WebSocket error: {ws_err}")
-
                 recipients = set([msg.sender_id] + assignee_ids)
 
                 payload = {
