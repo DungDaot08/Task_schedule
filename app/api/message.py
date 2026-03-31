@@ -82,13 +82,13 @@ def list_messages(
         .all()
     )
 
+    def to_dict(obj):
+        return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
+
     data = [
         {
-            "id": msg.id,
-            "content": msg.content,
-            "sender_id": msg.sender_id,
-            "username": username,
-            "created_at": msg.created_at,
+            **to_dict(msg),
+            "username": username
         }
         for msg, username in results
     ]
