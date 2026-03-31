@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import asyncio
 from uuid import UUID
 from app.ws.manager import manager
+from app.task_queue.redis_queue import publish_event
 
 scheduler = BackgroundScheduler()
 
@@ -40,11 +41,23 @@ def schedule_task_reminder(
             else:
                 msg = "Task bắt đầu"
 
-            asyncio.run(
-                manager.send_to_user(
-                    user_id,
+            # asyncio.run(
+                # manager.send_to_user(
+                #    user_id,
+                #    {
+                #        "type": "task_reminder",
+                #        "data": {
+                #            "task_id": str(task_id),
+                #            "reminder_type": type,   # 'remind' | 'start'
+                #            "message": description,
+                #            # "label": msg             # 👈 optional: text hiển thị
+                #        }
+                #    }
+            #    )
+                publish_event(
                     {
                         "type": "task_reminder",
+                        "user_id": str(user_id),
                         "data": {
                             "task_id": str(task_id),
                             "reminder_type": type,   # 'remind' | 'start'
@@ -53,7 +66,7 @@ def schedule_task_reminder(
                         }
                     }
                 )
-            )
+            # )
 
         except Exception as e:
             print("WebSocket send error:", e)

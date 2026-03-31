@@ -8,7 +8,7 @@ from app.database import get_db
 from app.schemas import MessageCreate, MessageOut
 from app.models import Message
 from app.auth.deps import get_current_user
-from app.ai.worker_render import run_once
+from app.ai.worker_render import run_once_sync, run_once
 from app.task_queue.redis_queue import push_job
 from app.task_queue.redis_queue import publish_event
 import uuid
@@ -63,7 +63,9 @@ async def send_message(
 
     # push_job(msg.id)
     push_job(str(msg.id))
-    await run_once()  # 👈 chạy cùng process
+    # await run_once()  # 👈 chạy cùng process
+    # background_tasks.addtask()
+    background_tasks.add_task(run_once_sync)
     # print("🔥 SEND MESSAGE PID:", os.getpid())
 
     return msg
