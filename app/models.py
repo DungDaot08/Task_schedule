@@ -112,7 +112,7 @@ class Task(Base):
     # ⭐ NEW FIELD
     status = Column(
         String(20),
-        default="pending"
+        default="Đang chờ"
     )
 
     source_message_id = Column(
