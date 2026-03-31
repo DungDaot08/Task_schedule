@@ -11,7 +11,9 @@ from uuid import UUID
 from app.ws.manager import manager
 from app.task_queue.redis_queue import publish_event
 
-scheduler = BackgroundScheduler()
+scheduler = BackgroundScheduler(
+    timezone=pytz.timezone("Asia/Ho_Chi_Minh")
+)
 
 
 def start_scheduler():
@@ -91,32 +93,28 @@ def schedule_task_reminder(
 ):
     tz = pytz.timezone("Asia/Ho_Chi_Minh")
 
-    # ✅ đảm bảo run_time có timezone
+    # ✅ đảm bảo có timezone
     if run_time.tzinfo is None:
         run_time = tz.localize(run_time)
 
-    # ✅ so sánh chuẩn UTC
-    now = datetime.now(timezone.utc)
-    if run_time.astimezone(timezone.utc) <= now:
+    now = datetime.now(tz)
+
+    if run_time <= now:
         print("⚠️ Skip job in the past")
         return
 
     def job():
         print(f"[SCHEDULER] Trigger task {task_id} - {type}")
 
-        try:
-            publish_event({
-                "type": "task_reminder",
-                "user_id": str(user_id),
-                "data": {
-                    "task_id": str(task_id),
-                    "reminder_type": type,
-                    "message": description,
-                }
-            })
-
-        except Exception as e:
-            print("WebSocket send error:", e)
+        publish_event({
+            "type": "task_reminder",
+            "user_id": str(user_id),
+            "data": {
+                "task_id": str(task_id),
+                "reminder_type": type,
+                "message": description,
+            }
+        })
 
     scheduler.add_job(
         job,
