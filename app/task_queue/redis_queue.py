@@ -27,6 +27,7 @@ r = redis.Redis(
     socket_timeout=5            # ⬅️ tránh treo worker
 )
 
+CHANNEL = "ws_events"
 # ========================
 # QUEUE FUNCTIONS
 # ========================
@@ -59,3 +60,36 @@ def pop_job():
     except Exception as e:
         logger.exception(f"[REDIS] POP error: {e}")
         return None
+
+
+def publish_event(event: dict):
+    """
+    Publish event cho WebSocket
+    """
+    try:
+        payload = json.dumps(event)
+        r.publish(CHANNEL, payload)
+        logger.info(f"[REDIS] PUBLISH | {event.get('type')}")
+    except Exception as e:
+        logger.exception(f"[REDIS] PUBLISH error: {e}")
+
+
+def subscribe_events(callback):
+    """
+    Subscribe Redis channel (blocking)
+    """
+    pubsub = r.pubsub()
+    pubsub.subscribe(CHANNEL)
+
+    logger.info("[REDIS] SUBSCRIBED ws_events")
+
+    for message in pubsub.listen():
+        try:
+            if message["type"] != "message":
+                continue
+
+            data = json.loads(message["data"])
+            callback(data)
+
+        except Exception as e:
+            logger.exception(f"[REDIS] SUB error: {e}")

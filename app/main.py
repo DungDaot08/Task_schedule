@@ -9,6 +9,7 @@ from app.api.user_api import router as user_router
 from app.api.task_api import router as task_router
 from app.api.auth import router as auth_router
 from app.api.ws import websocket_endpoint
+from app.ws.listener import start_ws_listener
 
 app = FastAPI()
 
@@ -20,6 +21,7 @@ Base.metadata.create_all(bind=engine)
 def on_startup():
     start_scheduler()
     load_jobs_from_db()
+    start_ws_listener()
 
 
 origins = [
@@ -49,6 +51,6 @@ def test():
     return {"message": "backend OK"}
 
 
-# @app.websocket("/ws")
-# async def ws(ws: WebSocket):
-#    await websocket_endpoint(ws)
+@app.websocket("/ws")
+async def ws(ws: WebSocket):
+    await websocket_endpoint(ws)

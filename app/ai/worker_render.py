@@ -9,6 +9,7 @@ from app.crud import create_task
 from app.models import Message
 from app.ws.manager import manager
 import asyncio
+from app.task_queue.redis_queue import publish_event
 
 # ========================
 # LOGGING CONFIG
@@ -86,10 +87,21 @@ async def run_once():
                 )
 
                 try:
-                    await manager.send_to_user(
-                        msg.sender_id,
+                    # await manager.send_to_user(
+                    #    msg.sender_id,
+                    #    {
+                    #        "type": "task_created",
+                    #        "data": {
+                    #                "message_id": to_str(msg.id),
+                    #                "task_id": to_str(task.id),
+                    #                "title": task.title
+                    #        }
+                    #    }
+                    # )
+                    publish_event(
                         {
                             "type": "task_created",
+                            "user_id": str(msg.sender_id),
                             "data": {
                                     "message_id": to_str(msg.id),
                                     "task_id": to_str(task.id),
@@ -112,10 +124,18 @@ async def run_once():
 
                 for user_id in recipients:
                     try:
-                        await manager.send_to_user(
-                            user_id,
+                        # await manager.send_to_user(
+                        #    user_id,
+                        #    {
+                        #        "type": "task_created" if user_id == msg.sender_id else "task_assigned",
+                        #        "data": payload
+                        #    }
+                        # )
+                        publish_event(
                             {
+
                                 "type": "task_created" if user_id == msg.sender_id else "task_assigned",
+                                "user_id": str(user_id),
                                 "data": payload
                             }
                         )

@@ -10,6 +10,7 @@ from app.models import Message
 from app.auth.deps import get_current_user
 from app.ai.worker_render import run_once
 from app.task_queue.redis_queue import push_job
+from app.task_queue.redis_queue import publish_event
 import uuid
 import os
 
@@ -44,7 +45,15 @@ async def send_message(
             for c in obj.__table__.columns
         }
 
-    await manager.broadcast({
+    # await manager.broadcast({
+    #    "type": "new_message",
+    #    "data": {
+    #        **to_dict(msg),
+    #        "username": current_user.username
+    #    }
+    # })
+
+    publish_event({
         "type": "new_message",
         "data": {
             **to_dict(msg),
@@ -53,8 +62,8 @@ async def send_message(
     })
 
     # push_job(msg.id)
-    push_job(str(msg.id))
-    await run_once()  # 👈 chạy cùng process
+    # push_job(str(msg.id))
+    # await run_once()  # 👈 chạy cùng process
     print("🔥 SEND MESSAGE PID:", os.getpid())
 
     return msg
