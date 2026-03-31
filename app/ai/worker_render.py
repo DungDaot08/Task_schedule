@@ -90,16 +90,16 @@ def run_once():
                         manager.send_to_user(
                             msg.sender_id,
                             {
-                                "type": "task_created",  # or "task_assigned"
-                                "message_id": to_str(msg.id),
-                                "task_id": to_str(task.id),
-                                "title": task.title
+                                "type": "task_created",
+                                "data": {
+                                    "message_id": to_str(msg.id),
+                                    "task_id": to_str(task.id),
+                                    "title": task.title
+                                }
                             }
                         )
                     )
-                    logger.info(
-                        f"📡 WebSocket sent | user_id={msg.sender_id}"
-                    )
+                    logger.info(f"📡 WebSocket sent | user_id={msg.sender_id}")
 
                 except Exception as ws_err:
                     logger.error(f"❌ WebSocket error: {ws_err}")
@@ -118,8 +118,8 @@ def run_once():
                             manager.send_to_user(
                                 user_id,
                                 {
-                                    **payload,
-                                    "type": "task_created" if user_id == msg.sender_id else "task_assigned"
+                                    "type": "task_created" if user_id == msg.sender_id else "task_assigned",
+                                    "data": payload
                                 }
                             )
                         )
@@ -127,7 +127,8 @@ def run_once():
 
                     except Exception as ws_err:
                         logger.error(
-                            f"❌ WS error | user_id={user_id} | err={ws_err}")
+                            f"❌ WS error | user_id={user_id} | err={ws_err}"
+                        )
                 # logger.info(
                 #    f"📝 Task created | task_id={task.id}"
                 # )

@@ -45,12 +45,16 @@ def schedule_task_reminder(
                     user_id,
                     {
                         "type": "task_reminder",
-                        "task_id": str(task_id),
-                        "reminder_type": type,  # type = 'remind' or 'start'
-                        "message": description,
+                        "data": {
+                            "task_id": str(task_id),
+                            "reminder_type": type,   # 'remind' | 'start'
+                            "message": description,
+                            # "label": msg             # 👈 optional: text hiển thị
+                        }
                     }
                 )
             )
+
         except Exception as e:
             print("WebSocket send error:", e)
 
