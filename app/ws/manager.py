@@ -36,6 +36,8 @@ class ConnectionManager:
         except Exception as e:
             print(f"🔥 WS send error for {user_id}: {e}")
             self.disconnect(user_id)
+        print("👀 ACTIVE:", list(self.active_connections.keys()))
+        print("👉 SEND TO:", user_id)
 
     async def broadcast(self, data: dict):
         for user_id, ws in list(self.active_connections.items()):
