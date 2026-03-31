@@ -1,3 +1,5 @@
+from app import models  # 👈 QUAN TRỌNG
+from app.database import Base, engine
 from app.api import ws
 from app.scheduler import start_scheduler, load_jobs_from_db
 from fastapi import FastAPI, WebSocket
@@ -10,6 +12,7 @@ from app.api.ws import websocket_endpoint
 
 app = FastAPI()
 
+Base.metadata.create_all(bind=engine)
 # app.include_router(ws.router)
 
 

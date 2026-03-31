@@ -1,7 +1,7 @@
 import time
 import logging
 from datetime import datetime
-
+from uuid import UUID
 from app.task_queue.redis_queue import pop_job
 from app.ai.llm_grok import parse_message
 from app.database import SessionLocal
@@ -21,6 +21,10 @@ logging.basicConfig(
 logger = logging.getLogger("ai-worker")
 
 
+def to_str(x):
+    return str(x) if x else None
+
+
 def run_once():
     run_id = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     logger.info(f"🚀 Worker triggered | run_id={run_id}")
@@ -34,6 +38,10 @@ def run_once():
             return {"status": "empty", "run_id": run_id}
 
         message_id = job.get("message_id")
+
+        if isinstance(message_id, str):
+            message_id = UUID(message_id)
+
         logger.info(f"📩 Job received | message_id={message_id}")
 
         db = SessionLocal()
@@ -82,9 +90,9 @@ def run_once():
                         manager.send_to_user(
                             msg.sender_id,
                             {
-                                "type": "task_created",
-                                "message_id": msg.id,
-                                "task_id": task.id,
+                                "type": "task_created",  # or "task_assigned"
+                                "message_id": to_str(msg.id),
+                                "task_id": to_str(task.id),
                                 "title": task.title
                             }
                         )
@@ -99,8 +107,8 @@ def run_once():
                 recipients = set([msg.sender_id] + assignee_ids)
 
                 payload = {
-                    "message_id": msg.id,
-                    "task_id": task.id,
+                    "message_id": to_str(msg.id),
+                    "task_id": to_str(task.id),
                     "title": task.title
                 }
 

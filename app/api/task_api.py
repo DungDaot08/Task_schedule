@@ -10,7 +10,7 @@ from app.scheduler import (
     schedule_task_reminder,
     remove_all_task_schedules
 )
-
+from uuid import UUID
 from app.database import get_db
 from app.models import Task
 from app.schemas import TaskOut
@@ -39,7 +39,7 @@ def get_tasks(
             )
         )
         .distinct()
-        .order_by(Task.id)
+        .order_by(Task.created_at.desc())
         .all()
     )
 
@@ -47,7 +47,7 @@ def get_tasks(
 
     for task in tasks:
         result.append({
-            "id": task.id,
+            "id": str(task.id),
             "title": task.title,
             "description": task.description,
             "start_time": task.start_time,
@@ -56,13 +56,13 @@ def get_tasks(
             "status": task.status,
 
             "creator": {
-                "user_id": task.creator.id,
+                "user_id": str(task.creator.id),
                 "username": task.creator.username
             } if task.creator else None,
 
             "assignees": [
                 {
-                    "user_id": a.user.id,
+                    "user_id": str(a.user.id),
                     "username": a.user.username
                 }
                 for a in task.assignees
@@ -78,7 +78,7 @@ def get_tasks_by_status(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    if status not in ["pending", "accepted", "completed"]:
+    if status not in ["Đang chờ", "Đã xác nhận", "Hoàn thành"]:
         return {"error": "Status không hợp lệ"}
 
     tasks = (
@@ -96,7 +96,7 @@ def get_tasks_by_status(
             )
         )
         .distinct()
-        .order_by(Task.id.desc())
+        .order_by(Task.created_at.desc())
         .all()
     )
 
@@ -104,7 +104,7 @@ def get_tasks_by_status(
 
     for task in tasks:
         result.append({
-            "id": task.id,
+            "id": str(task.id),
             "title": task.title,
             "description": task.description,
             "start_time": task.start_time,
@@ -113,13 +113,13 @@ def get_tasks_by_status(
             "status": task.status,
 
             "creator": {
-                "user_id": task.creator.id,
+                "user_id": str(task.creator.id),
                 "username": task.creator.username
             } if task.creator else None,
 
             "assignees": [
                 {
-                    "user_id": a.user.id,
+                    "user_id": str(a.user.id),
                     "username": a.user.username
                 }
                 for a in task.assignees
@@ -151,7 +151,11 @@ def delete_task(
     user_ids = [task.creator_id] + [a.user_id for a in assignees]
 
     # ✅ remove schedule
-    remove_all_task_schedules(task.id, user_ids)
+    # remove_all_task_schedules(task.id, user_ids)
+    remove_all_task_schedules(
+        str(task.id),
+        [str(uid) for uid in user_ids]
+    )
 
     # xóa assignees
     db.query(TaskAssignee).filter(TaskAssignee.task_id == task_id).delete()
@@ -165,7 +169,7 @@ def delete_task(
 
 @router.patch("/{task_id}")
 def update_task(
-    task_id: int,
+    task_id: UUID,
     data: dict,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -196,24 +200,28 @@ def update_task(
         task.remind_time = data["remind_time"]
 
     if "status" in data:
-        if data["status"] not in ["pending", "accepted", "completed"]:
+        if data["status"] not in ["Đang chờ", "Đã chấp nhận", "Hoàn thành"]:
             return {"error": "Status không hợp lệ"}
         task.status = data["status"]
 
-    remove_all_task_schedules(task.id, user_ids)
+    # remove_all_task_schedules(task.id, user_ids)
+    remove_all_task_schedules(
+        str(task.id),
+        [str(uid) for uid in user_ids]
+    )
 
     db.commit()
     db.refresh(task)
 
     # ✅ chỉ xử lý schedule khi status = accepted
-    if task.status == "accepted":
+    if task.status == "Đã chấp nhận":
 
         # ✅ schedule lại
         for user_id in user_ids:
             if task.remind_time:
                 schedule_task_reminder(
-                    task_id=task.id,
-                    user_id=user_id,
+                    task_id=str(task.id),
+                    user_id=str(user_id),
                     run_time=task.remind_time,
                     description=task.description,
                     type="remind"
@@ -221,8 +229,8 @@ def update_task(
 
             if task.start_time:
                 schedule_task_reminder(
-                    task_id=task.id,
-                    user_id=user_id,
+                    task_id=str(task.id),
+                    user_id=str(user_id),
                     run_time=task.start_time,
                     description=task.description,
                     type="start"

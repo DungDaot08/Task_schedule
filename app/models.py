@@ -11,6 +11,8 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy.dialects.postgresql import ARRAY
+import uuid
+from sqlalchemy.dialects.postgresql import UUID
 
 # =========================
 # USERS
@@ -20,7 +22,9 @@ from sqlalchemy.dialects.postgresql import ARRAY
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
+    # id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True,
+                default=uuid.uuid4, index=True)
     username = Column(String(50), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
 
@@ -34,10 +38,19 @@ class User(Base):
 class Message(Base):
     __tablename__ = "messages"
 
-    id = Column(Integer, primary_key=True, index=True)
+    # id = Column(Integer, primary_key=True, index=True)
+
+    # sender_id = Column(
+    #    Integer,
+    #    ForeignKey("users.id"),
+    #    nullable=False
+    # )
+
+    id = Column(UUID(as_uuid=True), primary_key=True,
+                default=uuid.uuid4, index=True)
 
     sender_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("users.id"),
         nullable=False
     )
@@ -50,8 +63,14 @@ class Message(Base):
     )
 
     # ⭐ NEW FIELD (Phase 1 requirement)
+    # generated_task_id = Column(
+    #    Integer,
+    #    ForeignKey("tasks.id"),
+    #    nullable=True
+    # )
+
     generated_task_id = Column(
-        Integer,
+        UUID(as_uuid=True),
         ForeignKey("tasks.id"),
         nullable=True
     )
@@ -68,13 +87,16 @@ class Message(Base):
 class Task(Base):
     __tablename__ = "tasks"
 
-    id = Column(Integer, primary_key=True, index=True)
+    # id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True,
+                default=uuid.uuid4, index=True)
 
     title = Column(Text, nullable=False)
     description = Column(Text)
 
     creator_id = Column(
-        Integer,
+        # Integer,
+        UUID(as_uuid=True),
         ForeignKey("users.id"),
         nullable=False
     )
@@ -94,7 +116,8 @@ class Task(Base):
     )
 
     source_message_id = Column(
-        Integer,
+        # Integer,
+        UUID(as_uuid=True),
         ForeignKey("messages.id")
     )
 
@@ -116,16 +139,19 @@ class Task(Base):
 class TaskAssignee(Base):
     __tablename__ = "task_assignees"
 
-    id = Column(Integer, primary_key=True)
+    # id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     task_id = Column(
-        Integer,
+        # Integer,
+        UUID(as_uuid=True),
         ForeignKey("tasks.id"),
         nullable=False
     )
 
     user_id = Column(
-        Integer,
+        # Integer,
+        UUID(as_uuid=True),
         ForeignKey("users.id"),
         nullable=False
     )

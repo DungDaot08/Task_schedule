@@ -10,6 +10,7 @@ from app.models import Message
 from app.auth.deps import get_current_user
 from app.ai.worker_render import run_once
 from app.task_queue.redis_queue import push_job
+import uuid
 
 router = APIRouter(prefix="/messages", tags=["Messages"])
 
@@ -32,8 +33,15 @@ async def send_message(
     db.refresh(msg)
 
     # ✅ push WS realtime
+
     def to_dict(obj):
-        return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
+        return {
+            # convert hết sang string cho chắc
+            c.name: str(getattr(obj, c.name))
+            if isinstance(getattr(obj, c.name), uuid.UUID)
+            else getattr(obj, c.name)
+            for c in obj.__table__.columns
+        }
 
     await manager.broadcast({
         "type": "new_message",
@@ -43,7 +51,8 @@ async def send_message(
         }
     })
 
-    push_job(msg.id)
+    # push_job(msg.id)
+    push_job(str(msg.id))
     background_tasks.add_task(run_once)
 
     return msg
@@ -85,7 +94,12 @@ def list_messages(
     )
 
     def to_dict(obj):
-        return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
+        return {
+            c.name: str(getattr(obj, c.name))
+            if isinstance(getattr(obj, c.name), uuid.UUID)
+            else getattr(obj, c.name)
+            for c in obj.__table__.columns
+        }
 
     data = [
         {

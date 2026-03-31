@@ -28,7 +28,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 
     token = create_access_token(
         {
-            "user_id": user.id,
+            "user_id": str(user.id),
             "username": user.username,
         }
     )
@@ -37,7 +37,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
         "access_token": token,
         "token_type": "bearer",
         "user": {
-            "id": user.id,
+            "id": str(user.id),
             "username": user.username,
         }
     }

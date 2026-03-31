@@ -32,13 +32,13 @@ r = redis.Redis(
 # ========================
 
 
-def push_job(message_id: int):
+def push_job(message_id):
     """
     Push message_id vào queue AI
     """
-    payload = json.dumps({"message_id": message_id})
+    payload = json.dumps({"message_id": str(message_id)})
     r.lpush(QUEUE, payload)
-    logger.info(f"[REDIS] PUSH job | message_id={message_id}")
+    logger.info(f"[REDIS] PUSH job | message_id={str(message_id)}")
 
 
 def pop_job():

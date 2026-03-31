@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 
 
 class MessageCreate(BaseModel):
@@ -8,11 +9,11 @@ class MessageCreate(BaseModel):
 
 
 class MessageOut(BaseModel):
-    id: int
-    sender_id: int
+    id: UUID
+    sender_id: UUID
     content: str
     created_at: datetime
-    generated_task_id: Optional[int]
+    generated_task_id: Optional[UUID]
 
     class Config:
         from_attributes = True
@@ -20,7 +21,7 @@ class MessageOut(BaseModel):
 
 
 class TaskOut(BaseModel):
-    id: int
+    id: UUID
     title: str
     description: Optional[str] = None
     start_time: Optional[datetime]
@@ -28,7 +29,7 @@ class TaskOut(BaseModel):
 
 
 class UserOut(BaseModel):
-    id: int
+    id: UUID
     username: str
     # password: str
 
@@ -37,17 +38,17 @@ class UserOut(BaseModel):
 
 
 class TaskAssigneeOut(BaseModel):
-    user_id: int
+    user_id: UUID
 
     class Config:
         orm_mode = True
 
 
 class TaskOut(BaseModel):
-    id: int
+    id: UUID
     title: str
     description: Optional[str] = None
-    creator_id: int
+    creator_id: UUID
     start_time: Optional[datetime] = None
     remind_time: Optional[datetime] = None
     created_at: datetime

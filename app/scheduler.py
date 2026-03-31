@@ -6,7 +6,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from datetime import datetime, timezone
 import asyncio
-
+from uuid import UUID
 from app.ws.manager import manager
 
 scheduler = BackgroundScheduler()
@@ -17,8 +17,8 @@ def start_scheduler():
 
 
 def schedule_task_reminder(
-    task_id: int,
-    user_id: int,
+    task_id: UUID,
+    user_id: UUID,
     run_time: datetime,
     description: str,
     type: str    # 👈 mặc định
@@ -45,9 +45,8 @@ def schedule_task_reminder(
                     user_id,
                     {
                         "type": "task_reminder",
-                        "task_id": task_id,
+                        "task_id": str(task_id),
                         "reminder_type": type,  # type = 'remind' or 'start'
-                        # "description": description,
                         "message": description,
                     }
                 )
@@ -59,7 +58,8 @@ def schedule_task_reminder(
         job,
         "date",
         run_date=run_time,
-        id=f"task_{task_id}_{user_id}_{type}",  # 👈 tránh bị overwrite
+        # id=f"task_{task_id}_{user_id}_{type}",  # 👈 tránh bị overwrite
+        id=f"task_{str(task_id)}_{str(user_id)}_{type}",
         replace_existing=True
     )
 
@@ -92,8 +92,8 @@ def load_jobs_from_db():
             if task.remind_time and task.remind_time > now:
                 for user_id in user_ids:
                     schedule_task_reminder(
-                        task_id=task.id,
-                        user_id=user_id,
+                        task_id=str(task.id),
+                        user_id=str(user_id),
                         run_time=task.remind_time,
                         description=task.description,
                         type="remind"
@@ -104,8 +104,8 @@ def load_jobs_from_db():
             if task.start_time and task.start_time > now:
                 for user_id in user_ids:
                     schedule_task_reminder(
-                        task_id=task.id,
-                        user_id=user_id,
+                        task_id=str(task.id),
+                        user_id=str(user_id),
                         run_time=task.start_time,
                         description=task.description,
                         type="start"
@@ -118,10 +118,10 @@ def load_jobs_from_db():
         db.close()
 
 
-def remove_all_task_schedules(task_id: int, user_ids: list[int]):
+def remove_all_task_schedules(task_id, user_ids: list):
     for user_id in user_ids:
         for type in ["remind", "start"]:
-            job_id = f"task_{task_id}_{user_id}_{type}"
+            job_id = f"task_{str(task_id)}_{str(user_id)}_{type}"
 
             try:
                 scheduler.remove_job(job_id)
