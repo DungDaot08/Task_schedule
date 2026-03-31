@@ -67,7 +67,8 @@ def publish_event(event: dict):
     Publish event cho WebSocket
     """
     try:
-        payload = json.dumps(event)
+        # payload = json.dumps(event)
+        payload = json.dumps(event, default=str)
         r.publish(CHANNEL, payload)
         logger.info(f"[REDIS] PUBLISH | {event.get('type')}")
     except Exception as e:
