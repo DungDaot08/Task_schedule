@@ -49,6 +49,6 @@ def test():
     return {"message": "backend OK"}
 
 
-@app.websocket("/ws")
-async def ws(ws: WebSocket):
-    await websocket_endpoint(ws)
+# @app.websocket("/ws")
+# async def ws(ws: WebSocket):
+#    await websocket_endpoint(ws)
