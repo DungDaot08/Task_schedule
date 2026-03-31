@@ -172,3 +172,7 @@ async def run_once():
             "error": str(e),
             "run_id": run_id
         }
+
+
+def run_once_sync():
+    asyncio.run(run_once())
