@@ -58,7 +58,8 @@ class Message(Base):
     content = Column(Text, nullable=False)
 
     created_at = Column(
-        DateTime,
+        # DateTime,
+        DateTime(timezone=True),
         server_default=func.now()
     )
 
@@ -101,11 +102,11 @@ class Task(Base):
         nullable=False
     )
 
-    start_time = Column(DateTime)
-    remind_time = Column(DateTime)
+    start_time = Column(DateTime(timezone=True))
+    remind_time = Column(DateTime(timezone=True))
 
     created_at = Column(
-        DateTime,
+        DateTime(timezone=True),
         server_default=func.now()
     )
 
