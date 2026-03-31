@@ -25,7 +25,7 @@ def to_str(x):
     return str(x) if x else None
 
 
-def run_once():
+async def run_once():
     run_id = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     logger.info(f"🚀 Worker triggered | run_id={run_id}")
 
@@ -86,18 +86,16 @@ def run_once():
                 )
 
                 try:
-                    asyncio.run(
-                        manager.send_to_user(
-                            msg.sender_id,
-                            {
-                                "type": "task_created",
-                                "data": {
+                    await manager.send_to_user(
+                        msg.sender_id,
+                        {
+                            "type": "task_created",
+                            "data": {
                                     "message_id": to_str(msg.id),
                                     "task_id": to_str(task.id),
                                     "title": task.title
-                                }
                             }
-                        )
+                        }
                     )
                     logger.info(f"📡 WebSocket sent | user_id={msg.sender_id}")
 
@@ -114,14 +112,12 @@ def run_once():
 
                 for user_id in recipients:
                     try:
-                        asyncio.run(
-                            manager.send_to_user(
-                                user_id,
-                                {
-                                    "type": "task_created" if user_id == msg.sender_id else "task_assigned",
-                                    "data": payload
-                                }
-                            )
+                        await manager.send_to_user(
+                            user_id,
+                            {
+                                "type": "task_created" if user_id == msg.sender_id else "task_assigned",
+                                "data": payload
+                            }
                         )
                         logger.info(f"📡 WS sent | user_id={user_id}")
 
