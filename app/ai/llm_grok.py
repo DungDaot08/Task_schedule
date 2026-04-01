@@ -319,7 +319,8 @@ def parse_message_1(message: str):
 
 def extract_assignees_regex(text: str):
     # Lấy tất cả chuỗi sau @, dừng ở space hoặc ký tự đặc biệt
-    matches = re.findall(r"@([^\s@]+)", text)
+    # matches = re.findall(r"@([^\s@]+)", text)
+    matches = re.findall(r"@([^\s@,]+)", text)
 
     # Optional: remove duplicate
     return list(dict.fromkeys(matches))
