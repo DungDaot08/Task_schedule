@@ -1,7 +1,7 @@
 from fastapi import Query
 from sqlalchemy.orm import selectinload
 from app.auth.deps import get_current_user
-from app.models import Task, TaskAssignee
+from app.models import Task, TaskAssignee, Message
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends
@@ -168,6 +168,13 @@ def delete_task(
 
     # xóa assignees
     db.query(TaskAssignee).filter(TaskAssignee.task_id == task_id).delete()
+    db.query(Message).filter(
+        Message.generated_task_id == task.id
+    ).update({
+        Message.generated_task_id: None
+    })
+
+    db.commit()
 
     # xóa task
     db.delete(task)
