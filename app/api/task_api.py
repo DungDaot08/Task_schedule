@@ -166,18 +166,24 @@ def delete_task(
         [str(uid) for uid in user_ids]
     )
 
-    # xóa assignees
-    db.query(TaskAssignee).filter(TaskAssignee.task_id == task_id).delete()
+    # clear FK trước
     db.query(Message).filter(
         Message.generated_task_id == task.id
-    ).update({
-        Message.generated_task_id: None
-    })
+    ).update(
+        {Message.generated_task_id: None},
+        synchronize_session=False
+    )
 
-    db.commit()
+    # xóa assignees
+    db.query(TaskAssignee).filter(
+        TaskAssignee.task_id == task_id
+    ).delete()
+
+    db.flush()  # 👈 cực kỳ quan trọng
 
     # xóa task
     db.delete(task)
+
     db.commit()
 
     return {"message": "Xóa task thành công"}
