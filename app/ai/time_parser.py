@@ -51,7 +51,8 @@ def normalize(text: str):
 def parse_time_of_day(text):
 
     # --- case đặc biệt: 10h kém 5 ---
-    m = re.search(r"(\d{1,2})h\s*kém\s*(\d{1,2})", text)
+    m = re.search(r"(\d{1,2})\s*(h|giờ)\s*(kém|thiếu|trừ)\s*(\d{1,2})", text)
+
     if m:
         hour = int(m.group(1))
         minute = 60 - int(m.group(2))
