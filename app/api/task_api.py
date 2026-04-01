@@ -153,7 +153,7 @@ def delete_task(
     for uid in user_ids:
         publish_event({
             "type": "task_deleted",
-            "user_ids": str(uid),  # 👈 nhiều user
+            "user_id": str(uid),  # 👈 nhiều user
             "data": {
                 "task_id": str(task.id)
             }
