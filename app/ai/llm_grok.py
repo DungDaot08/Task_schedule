@@ -5,11 +5,10 @@ import json
 import re
 from langchain_groq import ChatGroq
 # from app.ai.prompt import PROMPT
-# from app.ai.time_parser import parse_time
-from time_parser import parse_time
+from app.ai.time_parser import parse_time
+# from time_parser import parse_time
 
-# GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_API_KEY = "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"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 
 if not GROQ_API_KEY:

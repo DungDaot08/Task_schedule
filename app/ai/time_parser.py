@@ -50,6 +50,63 @@ def normalize(text: str):
 
 def parse_time_of_day(text):
 
+    # --- case đặc biệt: 10h kém 5 ---
+    m = re.search(r"(\d{1,2})h\s*kém\s*(\d{1,2})", text)
+    if m:
+        hour = int(m.group(1))
+        minute = 60 - int(m.group(2))
+        hour -= 1
+
+        if "chiều" in text or "tối" in text:
+            if hour < 12:
+                hour += 12
+
+        if "sáng" in text:
+            if hour == 12:
+                hour = 0
+
+        return hour, minute
+
+    # --- các case cũ ---
+    patterns = [
+        r"(\d{1,2})h(\d{1,2})",  # 8h30
+        r"(\d{1,2}):(\d{1,2})",  # 8:30
+        r"(\d{1,2})h",           # 8h
+    ]
+
+    for p in patterns:
+
+        m = re.search(p, text)
+
+        if m:
+
+            hour = int(m.group(1))
+
+            minute = 0
+
+            if len(m.groups()) >= 2 and m.group(2):
+                minute = int(m.group(2))
+
+            if "chiều" in text or "tối" in text:
+
+                if hour < 12:
+                    hour += 12
+
+            if "sáng" in text:
+
+                if hour == 12:
+                    hour = 0
+
+            if hour <= 6 and not any(x in text for x in ["sáng", "am"]):
+                hour += 12
+
+            return hour, minute
+
+    return None, None
+
+
+def parse_time_of_day_1(text):
+
     patterns = [
         r"(\d{1,2})h(\d{1,2})",  # 8h30
         r"(\d{1,2}):(\d{1,2})",  # 8:30
