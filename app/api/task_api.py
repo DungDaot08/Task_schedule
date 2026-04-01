@@ -14,7 +14,7 @@ from uuid import UUID
 from app.database import get_db
 from app.models import Task
 from app.schemas import TaskOut
-
+from app.task_queue.redis_queue import publish_event
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -150,6 +150,15 @@ def delete_task(
 
     user_ids = [task.creator_id] + [a.user_id for a in assignees]
 
+    for uid in user_ids:
+        publish_event({
+            "type": "task_deleted",
+            "user_ids": str(uid),  # 👈 nhiều user
+            "data": {
+                "task_id": str(task.id)
+            }
+        })
+
     # ✅ remove schedule
     # remove_all_task_schedules(task.id, user_ids)
     remove_all_task_schedules(
@@ -212,6 +221,22 @@ def update_task(
 
     db.commit()
     db.refresh(task)
+
+    payload = {
+        "task_id": str(task.id),
+        "title": task.title,
+        "description": task.description,
+        "status": task.status,
+        "start_time": str(task.start_time) if task.start_time else None,
+        "remind_time": str(task.remind_time) if task.remind_time else None,
+    }
+
+    for uid in user_ids:
+        publish_event({
+            "type": "task_updated",
+            "user_id": str(uid),
+            "data": payload
+        })
 
     # ✅ chỉ xử lý schedule khi status = accepted
     if task.status == "Đã chấp nhận":
