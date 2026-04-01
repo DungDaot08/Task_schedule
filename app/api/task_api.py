@@ -131,7 +131,7 @@ def get_tasks_by_status(
 
 @router.delete("/{task_id}")
 def delete_task(
-    task_id: int,
+    task_id: UUID,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):

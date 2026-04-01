@@ -13,6 +13,7 @@ from app.task_queue.redis_queue import push_job
 from app.task_queue.redis_queue import publish_event
 import uuid
 import os
+from uuid import UUID
 
 router = APIRouter(prefix="/messages", tags=["Messages"])
 
@@ -134,7 +135,7 @@ def list_messages(
 
 
 @router.get("/{message_id}", response_model=MessageOut)
-def get_message(message_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def get_message(message_id: UUID, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     message = db.query(Message).filter(Message.id == message_id).filter(
         Message.sender_id == current_user.id).first()
 
