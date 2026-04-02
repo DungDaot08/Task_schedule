@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 # CONFIG
 # ========================
 # REDIS_URL = "redis://default:AfSTAAIncDE2NTdmOGQ4YmM3YmQ0ZjQ1YWMxYmZlODZkMWMwM2E0YXAxNjI2MTE@smooth-rodent-62611.upstash.io:6379"
-REDIS_URL = "redis://default:gQAAAAAAASiwAAIncDIyMTVjODRkYjgyNGU0ZGMyYTgyYWJiMzc1NDc4MzI1ZHAyNzU5NTI@fun-muskrat-75952.upstash.io: 6379"
+REDIS_URL = "redis://default:gQAAAAAAASiwAAIncDIyMTVjODRkYjgyNGU0ZGMyYTgyYWJiMzc1NDc4MzI1ZHAyNzU5NTI@fun-muskrat-75952.upstash.io:6379"
 QUEUE = "task_nlp"
 
 logger = logging.getLogger("redis-queue")
