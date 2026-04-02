@@ -21,25 +21,6 @@ llm = ChatGroq(
 )
 
 
-def clean_assignees(assignees):
-    if not assignees:
-        return []
-
-    cleaned = []
-    for a in assignees:
-        if not a:
-            continue
-
-        # bỏ khoảng trắng + bỏ ký tự @ đầu
-        a = a.strip()
-        if a.startswith("@"):
-            a = a[1:]
-
-        cleaned.append(a)
-
-    return cleaned
-
-
 def extract_json(text: str) -> dict:
     """
     LLM đôi khi trả thêm chữ → bóc JSON an toàn
@@ -92,7 +73,14 @@ QUY TẮC TASK
 is_task = true nếu có:
 - @Tên
 - có hành động
-- có thời gian
+
+KHÔNG phụ thuộc vào việc có thời gian hay không.
+
+Ngay cả khi KHÔNG có thời gian → vẫn là task.
+
+Thời gian:
+- Có thể có hoặc KHÔNG
+- Nếu không có → time_text = null
 
 assignees:
 - lấy tên sau ký tự @
@@ -146,6 +134,14 @@ KHÔNG được:
 Chỉ COPY nguyên văn cụm thời gian từ câu đã chuẩn hóa.
 
 ========================
+QUY TẮC THỜI GIAN MẶC ĐỊNH
+
+Nếu KHÔNG tìm thấy cụm thời gian trong câu:
+→ time_text = null
+
+KHÔNG được tự suy luận hoặc tự thêm thời gian.
+
+========================
 OUTPUT JSON
 
 {{
@@ -154,6 +150,33 @@ OUTPUT JSON
   "description": "string",
   "assignees": ["string"],
   "time_text": "string hoặc null"
+}}
+
+========================
+VÍ DỤ KHÔNG CÓ THỜI GIAN
+
+Input:
+"@Nguyen nộp báo cáo"
+
+Output:
+{{
+  "is_task": true,
+  "title": "nộp báo cáo",
+  "description": "nộp báo cáo",
+  "assignees": ["Nguyen"],
+  "time_text": null
+}}
+
+Input:
+"@Lan gửi file thiết kế"
+
+Output:
+{{
+  "is_task": true,
+  "title": "gửi file thiết kế",
+  "description": "gửi file thiết kế",
+  "assignees": ["Lan"],
+  "time_text": null
 }}
 
 ========================
@@ -175,146 +198,14 @@ TIN NHẮN:
     data.setdefault("assignees", [])
     data.setdefault("time_text", None)
 
+    if data.get("is_task") and not data.get("time_text"):
+        data["time_text"] = "5 phút nữa"
+
     return data
-
-
-# ==============================
-# STEP 2
-# Convert time_text -> ISO datetime
-# ==============================
-def parse_time_with_llm(time_text: str):
-
-    tz = pytz.timezone("Asia/Ho_Chi_Minh")
-    now_dt = datetime.now(tz)
-
-    current_time = now_dt.isoformat()
-    current_date = now_dt.strftime("%Y-%m-%d")
-    weekday = now_dt.strftime("%A")
-
-    prompt = f"""
-Bạn là AI chuyên CHUYỂN ĐỔI thời gian tiếng Việt sang ISO datetime.
-
-========================
-THỜI GIAN HỆ THỐNG
-
-Current datetime:
-{current_time}
-
-Current date:
-{current_date}
-
-Current weekday:
-{weekday}
-
-Timezone:
-Asia/Ho_Chi_Minh (UTC+7)
-
-========================
-INPUT TIME TEXT
-
-"{time_text}"
-
-========================
-QUY TẮC
-
-1. Convert sang ISO 8601
-2. Phải dùng timezone +07:00
-3. Kết quả phải là thời gian trong tương lai
-
-========================
-QUY TẮC GIỜ
-
-"sáng"
-→ giữ nguyên giờ
-
-"chiều"
-→ giờ + 12 nếu < 12
-
-"tối"
-→ giờ + 12
-
-Ví dụ:
-
-2 giờ chiều
-→ 14:00
-
-3 giờ chiều
-→ 15:00
-
-7 giờ tối
-→ 19:00
-
-Nếu chỉ có:
-
-"3h"
-→ hiểu là 15:00
-
-========================
-QUY TẮC NGÀY
-
-"mai"
-→ ngày tiếp theo
-
-"tuần sau"
-→ cùng thứ tuần sau
-
-"thứ 6"
-→ thứ 6 gần nhất trong tương lai
-
-========================
-OUTPUT JSON
-
-{{
-  "start_time": "ISO datetime hoặc null"
-}}
-"""
-
-    res = llm.invoke(prompt)
-    raw = res.content.strip()
-
-    data = extract_json(raw)
-
-    if not data:
-        return None
-
-    return data.get("start_time")
-
 
 # ==============================
 # MAIN FUNCTION
 # ==============================
-def parse_message_1(message: str):
-
-    try:
-
-        # STEP 1: extract task
-        task = extract_task_info(message)
-
-        if not task.get("is_task"):
-            return {"is_task": False}
-
-        start_time = None
-
-        # STEP 2: parse time
-        if task.get("time_text"):
-            # start_time = parse_time_with_llm(task["time_text"])
-            start_time = parse_time(task["time_text"])
-
-        result = {
-            "is_task": True,
-            "title": task.get("title"),
-            "description": task.get("description"),
-            "description": message,
-            "assignees": task.get("assignees"),
-            "start_time": start_time,
-            "remind_time": None
-        }
-
-        return result
-
-    except Exception as e:
-        print("TASK PARSER ERROR:", e)
-        return {"is_task": False}
 
 
 def extract_assignees_regex(text: str):
