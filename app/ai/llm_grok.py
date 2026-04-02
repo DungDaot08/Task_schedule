@@ -35,6 +35,52 @@ def extract_json(text: str) -> dict:
 # STEP 1
 # Extract task info + time text
 # ==============================
+def is_task_message(message: str) -> bool:
+    prompt = f"""
+Bạn là AI phân loại tin nhắn.
+
+Nhiệm vụ:
+Xác định đây có phải là công việc được giao hay không.
+
+QUY TẮC:
+
+Là TASK nếu:
+- Có @Tên
+- Có yêu cầu hành động rõ ràng (giao việc)
+
+KHÔNG phải TASK nếu:
+- Là câu hỏi (bao giờ, khi nào, ?, nhỉ...)
+- KHÔNG dùng "nhé" để xác định câu hỏi
+- Là thảo luận / gợi ý
+- Không có hành động rõ ràng
+
+Ví dụ:
+
+"@Hung làm báo cáo nhé"
+→ true
+
+"1 tiếng nữa họp nhé @Nguyen"
+→ true
+
+"@Hung bao giờ làm báo cáo?"
+→ false
+
+"@Minh hay là làm cái này trước?"
+→ false
+
+Chỉ trả về:
+true hoặc false
+
+TIN NHẮN:
+"{message}"
+"""
+
+    res = llm.invoke(prompt)
+    raw = res.content.strip().lower()
+
+    return "true" in raw
+
+
 def extract_task_info(message: str):
 
     prompt = f"""
@@ -63,21 +109,10 @@ BƯỚC 2: TRÍCH XUẤT TASK
 
 NHIỆM VỤ:
 
-1. Xác định có phải công việc hay không
-2. Trích xuất thông tin task
-3. Lấy CHÍNH XÁC cụm thời gian
+1. Trích xuất thông tin task
+2. Lấy CHÍNH XÁC cụm thời gian
 
 ========================
-QUY TẮC TASK
-
-is_task = true nếu có:
-- @Tên
-- có hành động
-
-KHÔNG phụ thuộc vào việc có thời gian hay không.
-
-Ngay cả khi KHÔNG có thời gian → vẫn là task.
-
 Thời gian:
 - Có thể có hoặc KHÔNG
 - Nếu không có → time_text = null
@@ -180,6 +215,14 @@ Output:
 }}
 
 ========================
+QUAN TRỌNG
+
+Chỉ được trả về JSON hợp lệ.
+KHÔNG thêm text ngoài JSON.
+KHÔNG giải thích.
+
+JSON phải parse được bằng json.loads().
+========================
 TIN NHẮN:
 "{message}"
 """
@@ -220,6 +263,8 @@ def extract_assignees_regex(text: str):
 def parse_message(message: str):
 
     try:
+        if not is_task_message(message):
+            return {"is_task": False}
         # STEP 1: extract task
         task = extract_task_info(message)
 
