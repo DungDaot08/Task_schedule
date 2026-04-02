@@ -133,7 +133,9 @@ def load_jobs_from_db():
 
         tasks = (
             db.query(Task)
-            .filter(Task.start_time != None)
+            .filter(Task.start_time != None,
+                    Task.status == "Đã chấp nhận"
+                    )
             .all()
         )
 
